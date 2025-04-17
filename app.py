@@ -16,7 +16,7 @@ if not lib_search_task_id:
     st.sidebar.warning("Please enter a Task ID from a Library Search Workflow to proceed.",)
 
 #TODO: verify if the file retrieved contains all necessary columns for the current process_food_biomarkers() function
-quant_table_task_id = st.sidebar.text_input("Enter Task ID from a Sample Feature Table Workflow",
+quant_table_task_id = st.sidebar.text_input("Enter Task ID from a FBMN Workflow",
                                             placeholder="Enter here the task ID for the job from which the quant table should be retrieved.")
 
 sample_feature_table_file = st.sidebar.file_uploader("Upload Sample Feature Table", type=["csv", "tsv"])
@@ -41,12 +41,12 @@ if run_analysis:
     try:
         # Retrieve lib_search using the task ID
         with st.spinner("Downloading library result table..."):
-            lib_search = fetch_file(lib_search_task_id, "merged_results.tsv")
+            lib_search = fetch_file(lib_search_task_id.strip(), "merged_results.tsv", type="library_search_table")
             st.success("Library result table downloaded successfully!")
 
         with st.spinner("Downloading FBMN Quant table from task ID..."):
             if sample_feature_table_file is None:
-                sample_feature_table_file = fetch_file(quant_table_task_id, "clustering/tall_raw_data.tsv")
+                sample_feature_table_file = fetch_file(quant_table_task_id.strip(), "quant_table.csv", type="quant_table")
                 st.success(f"Quant table downloaded successfully from task {quant_table_task_id}!", icon="🔗")
             else:
                 st.success("Sample Feature Table loaded from uploaded file successfully!", icon="📂")
