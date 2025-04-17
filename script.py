@@ -17,7 +17,8 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file, qua
 
     # Transpose data
     sample_transpose = sample_feature_table_df.set_index("row ID")
-    sample_transpose = sample_transpose.filter(like=".mzXML", axis=1).T.reset_index()
+    # sample_transpose = sample_transpose.filter(like=".mzML", axis=1).T.reset_index()
+    sample_transpose = sample_transpose.filter(regex=r"\.mzML|\.mzXML", axis=1).T.reset_index()
     sample_transpose = sample_transpose.rename(columns={"index": "filename"})
 
     # Remove " Peak area" from filenames
@@ -34,7 +35,7 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file, qua
     # Extract biomarkers from TIC-normalized data
     biomarker_scans = lib_search_df["#Scan#"].astype(str)
     biomarkers_in_samples = sample_tic[sample_tic["row ID"].astype(str).isin(biomarker_scans.values)]
-    biomarkers_in_samples = biomarkers_in_samples.set_index("row ID").filter(like=".mzXML", axis=1).reset_index()
+    biomarkers_in_samples = biomarkers_in_samples.set_index("row ID").reset_index()
     biomarkers_in_samples = biomarkers_in_samples.rename(columns={"row ID": "#Scan#"})
     biomarkers_in_samples["#Scan#"] = biomarkers_in_samples["#Scan#"].astype(str)
     biomarker_hits['#Scan#'] = biomarker_hits['#Scan#'].astype(str)
@@ -84,4 +85,15 @@ if __name__ == '__main__':
     print(f"Processed food metadata saved to: {output_file}")
 
 # running command example:
-# python script.py --biomarkers_file data/Biomarkers_level5_FC5_VIP6.csv --lib_search_file input_test_files/librarymatches_all_analog.tsv --metadata_file data/gnps_metadata_ming.tsv --sample_feature_table_file input_test_files/MSV82493_iimn_gnps_quant.csv
+# python script.py --biomarkers_file data/Biomarkers_level5_FC5_VIP6.csv --lib_search_file input_test_files/merged_results.tsv --metadata_file data/gnps_metadata_ming.tsv --sample_feature_table_file input_test_files/MSV82493_iimn_gnps_quant.csv
+
+
+# Another example coming from task IDs:
+# --biomarkers_file
+# data/Biomarkers_level5_FC5_VIP6.csv
+# --lib_search_file
+# output/merged_results.tsv
+# --metadata_file
+# data/gnps_metadata_ming.tsv
+# --sample_feature_table_file
+# output/tall_raw_data.tsv
