@@ -1,4 +1,5 @@
 import requests
+import os
 
 import streamlit as st
 
@@ -23,7 +24,7 @@ def fetch_file(task_id: str, file_name: str) -> str:
     input_url = f"https://gnps2.org/resultfile?task={task_id}&file=nf_output/{file_name}"
     response = requests.get(input_url)
     response.raise_for_status()  # Raise an error for failed requests
-
+    os.makedirs('output', exist_ok=True)
     output_file_path = f"output/{file_name.split('/')[-1]}"
 
     with open(output_file_path, 'w') as f:
