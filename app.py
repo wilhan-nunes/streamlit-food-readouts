@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import streamlit as st
 
@@ -10,12 +12,22 @@ st.title("Food Biomarkers Analysis")
 # Sidebar inputs
 st.sidebar.header("Inputs")
 
+biomarkers_folder = 'data/biomarker_tables'
+files = os.listdir(biomarkers_folder)
+BIOMARKERS_FILES = [f for f in files if f.endswith(('.csv', '.tsv'))]
+
+selected_biomarkers_file = st.sidebar.selectbox(
+    "Select Biomarkers File",
+    BIOMARKERS_FILES,
+    help="Choose the biomarkers file to use for the analysis."
+)
+
+
 lib_search_task_id = st.sidebar.text_input("Enter Task ID from a Library Search Workflow",
                                            value='34e2b1b692444bf6ae37e71dd137c300')
 if not lib_search_task_id:
-    st.sidebar.warning("Please enter a Task ID from a Library Search Workflow to proceed.",)
+    st.sidebar.warning("Please enter a Task ID from a Library Search Workflow to proceed.", )
 
-#TODO: verify if the file retrieved contains all necessary columns for the current process_food_biomarkers() function
 quant_table_task_id = st.sidebar.text_input("Enter Task ID from a FBMN Workflow",
                                             placeholder="Enter here the task ID for the job from which the quant table should be retrieved.")
 
@@ -28,11 +40,10 @@ elif quant_table_task_id:
 else:
     st.sidebar.warning("Please upload a Sample Feature Table or provide a Task ID to fetch the quant table.")
 
-
-run_analysis = st.sidebar.button("Run Analysis", help="Click to start the analysis with the provided inputs.", use_container_width=True)
+run_analysis = st.sidebar.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
+                                 use_container_width=True)
 
 # Static file paths
-BIOMARKERS_FILE = "data/Biomarkers_level5_FC5_VIP6.csv"
 METADATA_FILE = "data/gnps_metadata_ming.tsv"
 
 # Process files when task ID and sample feature table are provided
@@ -46,7 +57,8 @@ if run_analysis:
 
         with st.spinner("Downloading FBMN Quant table from task ID..."):
             if sample_feature_table_file is None:
-                sample_feature_table_file = fetch_file(quant_table_task_id.strip(), "quant_table.csv", type="quant_table")
+                sample_feature_table_file = fetch_file(quant_table_task_id.strip(), "quant_table.csv",
+                                                       type="quant_table")
                 st.success(f"Quant table downloaded successfully from task {quant_table_task_id}!", icon="🔗")
             else:
                 st.success("Sample Feature Table loaded from uploaded file successfully!", icon="📂")
@@ -56,7 +68,8 @@ if run_analysis:
 
         # Process data
         with st.spinner("Processing data..."):
-            process_food_biomarkers(BIOMARKERS_FILE, lib_search, METADATA_FILE, sample_feature_table_df)
+            biomarker_filepath = os.path.join(biomarkers_folder, selected_biomarkers_file)
+            process_food_biomarkers(biomarker_filepath, lib_search, METADATA_FILE, sample_feature_table_df)
             st.success("Data processed successfully!")
 
         # Load and display the resulting table
@@ -76,4 +89,5 @@ if run_analysis:
         st.error(f"An error occurred: {e}")
         # raise
 else:
-    st.info("Please provide the Task ID for the Library Search workflow and the Quant Tabel file or Task ID from which it can be retrieve, then click Run Analysis.")
+    st.info(
+        "Please provide the Task ID for the Library Search workflow and the Quant Tabel file or Task ID from which it can be retrieve, then click Run Analysis.")
