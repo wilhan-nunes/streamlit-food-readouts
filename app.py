@@ -6,48 +6,55 @@ import streamlit as st
 from script import process_food_biomarkers
 from utils import fetch_file
 
+# cute badges
+BADGE_LIBRARY_ = ":green-badge[Library]"
+UPLOAD_QUANT_TABLE_ = ":blue-badge[Upload Quant Table]"
+BADGE_QUANT_TABLE_ = ":orange-badge[Quant Table]"
+
 # Streamlit app title
 st.title("Food Biomarkers Analysis")
 
 # Sidebar inputs
-st.sidebar.header("Inputs")
+with st.sidebar:
+    st.header("Inputs")
 
-biomarkers_folder = 'data/biomarker_tables'
-files = os.listdir(biomarkers_folder)
-BIOMARKERS_FILES = [f for f in files if f.endswith(('.csv', '.tsv'))]
+    biomarkers_folder = 'data/biomarker_tables'
+    files = os.listdir(biomarkers_folder)
+    BIOMARKERS_FILES = [f for f in files if f.endswith(('.csv', '.tsv'))]
 
-selected_biomarkers_file = st.sidebar.selectbox(
-    "Select Biomarkers File",
-    BIOMARKERS_FILES,
-    help="Choose the biomarkers file to use for the analysis."
-)
+    selected_biomarkers_file = st.selectbox(
+        "Select Biomarkers File",
+        BIOMARKERS_FILES,
+        help="Choose the biomarkers file to use for the analysis."
+    )
 
+    lib_search_task_id = st.text_input(f"{BADGE_LIBRARY_} Library Search Workflow Task ID (GNPS2)",
+                                       help="Enter the Task ID from a Library Search Workflow to retrieve the library search results.",
+                                       value="163d61c028334d1b8f98188a6fed60b7")
+    if not lib_search_task_id:
+        st.warning("Please enter a Task ID from a Library Search Workflow to proceed.", )
 
-lib_search_task_id = st.sidebar.text_input("Enter Task ID from a Library Search Workflow",
-                                           value='34e2b1b692444bf6ae37e71dd137c300')
-if not lib_search_task_id:
-    st.sidebar.warning("Please enter a Task ID from a Library Search Workflow to proceed.", )
+    quant_table_task_id = st.text_input(f"{BADGE_QUANT_TABLE_} FBMN Workflow Task ID (GNPS2)",
+                                        help="Enter the Task ID from a FBMN Workflow to retrieve the quant table.",
+                                        value="057283987ac946b9b220e0094faef7fb")
 
-quant_table_task_id = st.sidebar.text_input("Enter Task ID from a FBMN Workflow",
-                                            placeholder="Enter here the task ID for the job from which the quant table should be retrieved.")
+    sample_feature_table_file = st.file_uploader(f"{UPLOAD_QUANT_TABLE_} Upload Sample Feature Table",
+                                                 type=["csv", "tsv"])
 
-sample_feature_table_file = st.sidebar.file_uploader("Upload Sample Feature Table", type=["csv", "tsv"])
+    if sample_feature_table_file:
+        st.success(f"{UPLOAD_QUANT_TABLE_}  will be used for analysis.")
+    elif quant_table_task_id:
+        st.success(f"No file uploaded. {BADGE_QUANT_TABLE_} task ID will be used to fetch the quant table.")
+    else:
+        st.warning(f"Please {UPLOAD_QUANT_TABLE_} or provide a Task ID  for {BADGE_QUANT_TABLE_}")
 
-if sample_feature_table_file:
-    st.sidebar.success("Uploaded Sample Feature Table will be used for analysis.")
-elif quant_table_task_id:
-    st.sidebar.info("No file uploaded. Task ID will be used to fetch the quant table.")
-else:
-    st.sidebar.warning("Please upload a Sample Feature Table or provide a Task ID to fetch the quant table.")
-
-run_analysis = st.sidebar.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
-                                 use_container_width=True)
+    run_analysis = st.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
+                             use_container_width=True)
 
 # Static file paths
 METADATA_FILE = "data/gnps_metadata_ming.tsv"
 
 # Process files when task ID and sample feature table are provided
-# if lib_search_task_id and sample_feature_table_file and run_analysis:
 if run_analysis:
     try:
         # Retrieve lib_search using the task ID
@@ -90,4 +97,4 @@ if run_analysis:
         # raise
 else:
     st.info(
-        "Please provide the Task ID for the Library Search workflow and the Quant Tabel file or Task ID from which it can be retrieve, then click Run Analysis.")
+        ":information_source: Please, provide the inputs, then click Run Analysis.")
