@@ -14,13 +14,18 @@ BADGE_QUANT_TABLE_ = ":orange-badge[Quant Table]"
 # Streamlit app title
 st.title("Food Biomarkers Analysis")
 
+#defining query params to populate input fields
+query_params = st.query_params
+lib_task_id = query_params.get('lib_task_id', '')
+quant_task_id = query_params.get('quant_task_id', '')
+
 # Sidebar inputs
 with st.sidebar:
     st.header("Inputs")
 
     biomarkers_folder = 'data/biomarker_tables'
     files = os.listdir(biomarkers_folder)
-    BIOMARKERS_FILES = [f for f in files if f.endswith(('.csv', '.tsv'))]
+    BIOMARKERS_FILES = [os.path.splitext(f)[0] for f in files if f.endswith(('.csv', '.tsv'))]
 
     selected_biomarkers_file = st.selectbox(
         "Select Biomarkers File",
@@ -30,13 +35,15 @@ with st.sidebar:
 
     lib_search_task_id = st.text_input(f"{BADGE_LIBRARY_} Library Search Workflow Task ID (GNPS2)",
                                        help="Enter the Task ID from a Library Search Workflow to retrieve the library search results.",
-                                       value="163d61c028334d1b8f98188a6fed60b7")
+                                       placeholder='enter task ID...',
+                                       value=lib_task_id)
     if not lib_search_task_id:
         st.warning("Please enter a Task ID from a Library Search Workflow to proceed.", )
 
     quant_table_task_id = st.text_input(f"{BADGE_QUANT_TABLE_} FBMN Workflow Task ID (GNPS2)",
                                         help="Enter the Task ID from a FBMN Workflow to retrieve the quant table.",
-                                        value="057283987ac946b9b220e0094faef7fb")
+                                        placeholder='enter task ID...',
+                                        value=quant_task_id)
 
     sample_feature_table_file = st.file_uploader(f"{UPLOAD_QUANT_TABLE_} Upload Sample Feature Table",
                                                  type=["csv", "tsv"])
