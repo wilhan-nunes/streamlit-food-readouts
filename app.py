@@ -25,7 +25,7 @@ with st.sidebar:
 
     biomarkers_folder = 'data/biomarker_tables'
     files = os.listdir(biomarkers_folder)
-    BIOMARKERS_FILES = [os.path.splitext(f)[0] for f in files if f.endswith(('.csv', '.tsv'))]
+    BIOMARKERS_FILES = [f for f in files if f.endswith(('.csv', '.tsv'))]
 
     selected_biomarkers_file = st.selectbox(
         "Select Biomarkers File",
