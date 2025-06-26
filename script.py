@@ -1,18 +1,36 @@
-import pandas as pd
-import os
 import argparse
+import os
+from io import BytesIO
 
-def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file, quant_table: pd.DataFrame, output_dir="./output"):
+import pandas as pd
+
+
+def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file, quant_table: pd.DataFrame,
+                            output_dir="./output") -> dict:
+    # Get file extensions and set separators
+    biomarkers_ext = os.path.splitext(biomarkers_file)[1].lower()
+
+    biomarkers_sep = '\t' if biomarkers_ext in ['.tsv', '.txt'] else ','
+
+    if isinstance(metadata_file, str):
+        metadata_ext = os.path.splitext(metadata_file)[1].lower()
+        metadata_sep = '\t' if metadata_ext in ['.tsv', '.txt'] else ','
+    else:
+        metadata_sep = None
+
+    metadata_df = pd.read_csv(metadata_file, sep=metadata_sep)
+
+
     # Load files
-    biomarkers_df = pd.read_csv(biomarkers_file)
-    lib_search_df = pd.read_csv(lib_search_file, sep='\t')
-    metadata_df = pd.read_csv(metadata_file, sep='\t')
+    biomarkers_df = pd.read_csv(biomarkers_file, sep=biomarkers_sep)
+    lib_search_df = pd.read_csv(BytesIO(lib_search_file), sep='\t')
     sample_feature_table_df = quant_table
 
     # Prepare library search data
     lib_search_df = lib_search_df.rename(columns={"Protein": "Node"})[["#Scan#", "Node"]]
+    lib_search_df = lib_search_df[["#Scan#", "Node"]].astype(str)
     lib_search_df['Node'] = lib_search_df['Node'].apply(lambda x: x.replace(':', ''))
-    biomarkers_df = biomarkers_df.rename(columns={"Feature": "Node"})
+    biomarkers_df = biomarkers_df.rename(columns={"feature": "Node"})
     biomarker_hits = lib_search_df.astype(str).merge(biomarkers_df.astype(str), on="Node", how="left")
 
     # Transpose data
@@ -44,7 +62,8 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file, qua
     biomarkers_in_samples = biomarkers_in_samples[biomarkers_in_samples["category"].notna()]
 
     # Separate multiple categories and summarize
-    df_foods = biomarkers_in_samples.assign(category=biomarkers_in_samples["category"].str.split(", ")).explode("category")
+    df_foods = biomarkers_in_samples.assign(category=biomarkers_in_samples["category"].str.split(", ")).explode(
+        "category")
     food_summarized = df_foods.groupby("category").sum(numeric_only=True).reset_index()
 
     # Reshape for merging with metadata
@@ -61,31 +80,39 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file, qua
     result_path = f"{output_dir}/food_metadata.csv"
     food_metadata.to_csv(result_path, index=False)
 
-    return result_path
+    return {
+        'result_file_path': result_path,
+        'result_df': food_metadata,
+    }
+
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process food biomarkers and generate metadata.")
     parser.add_argument("--biomarkers_file", required=True, help="Path to the biomarkers CSV file.")
     parser.add_argument("--lib_search_file", required=True, help="Path to the library search TSV file.")
     parser.add_argument("--metadata_file", required=True, help="Path to the metadata TSV file.")
-    parser.add_argument("--sample_feature_table_file", required=True, help="Path to the sample feature table CSV file.")
+    parser.add_argument("--sample_quant_table_file", required=True, help="Path to the sample feature table CSV file.")
     parser.add_argument("--output_dir", default="./output", help="Directory to save the output file.")
 
     args = parser.parse_args()
 
     sample_feature_table_df = pd.read_csv(args.sample_feature_table_file, sep=None, engine='python')
 
-    output_file = process_food_biomarkers(
+    result = process_food_biomarkers(
         biomarkers_file=args.biomarkers_file,
         lib_search_file=args.lib_search_file,
         metadata_file=args.metadata_file,
         quant_table=sample_feature_table_df,
         output_dir=args.output_dir
     )
+
+    output_file = result['result_file_path']
     print(f"Processed food metadata saved to: {output_file}")
 
 # running command example:
-# python script.py --biomarkers_file data/Biomarkers_level5_FC5_VIP6.csv --lib_search_file input_test_files/merged_results.tsv --metadata_file data/gnps_metadata_ming.tsv --sample_feature_table_file input_test_files/MSV82493_iimn_gnps_quant.csv
+# python script.py --biomarkers_file data/Biomarkers_level5_FC5_VIP6.csv --lib_search_file input_test_files/merged_results.tsv --metadata_file data/gnps_metadata_ming.tsv --sample_quant_table_file input_test_files/MSV82493_iimn_gnps_quant.csv
 
 
 # Another example coming from task IDs:
@@ -95,5 +122,5 @@ if __name__ == '__main__':
 # output/merged_results.tsv
 # --metadata_file
 # data/gnps_metadata_ming.tsv
-# --sample_feature_table_file
+# --sample_quant_table_file
 # output/tall_raw_data.tsv

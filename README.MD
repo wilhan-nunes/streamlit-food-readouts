@@ -38,7 +38,7 @@ You can also process the data using the CLI script:
 python script.py --biomarkers_file <path_to_biomarkers_file> \
                  --lib_search_file <path_to_lib_search_file> \
                  --metadata_file <path_to_metadata_file> \
-                 --sample_feature_table_file <path_to_sample_feature_table_file> \
+                 --sample_quant_table_file <path_to_sample_feature_table_file> \
                  --output_dir <output_directory>
 ```
 
@@ -48,7 +48,7 @@ python script.py --biomarkers_file <path_to_biomarkers_file> \
 python script.py --biomarkers_file data/Biomarkers_level5_FC5_VIP6.csv \
                  --lib_search_file input_test_files/librarymatches_all_analog.tsv \
                  --metadata_file data/gnps_metadata_ming.tsv \
-                 --sample_feature_table_file input_test_files/MSV82493_iimn_gnps_quant.csv
+                 --sample_quant_table_file input_test_files/MSV82493_iimn_gnps_quant.csv
 ```
 
 The processed metadata will be saved in the specified output directory.
