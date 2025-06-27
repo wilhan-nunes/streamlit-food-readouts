@@ -30,7 +30,7 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file, qua
     lib_search_df = lib_search_df.rename(columns={"Protein": "Node"})[["#Scan#", "Node"]]
     lib_search_df = lib_search_df[["#Scan#", "Node"]].astype(str)
     lib_search_df['Node'] = lib_search_df['Node'].apply(lambda x: x.replace(':', ''))
-    biomarkers_df = biomarkers_df.rename(columns={"feature": "Node"})
+    biomarkers_df = biomarkers_df.rename(columns={"Feature": "Node"})
     biomarker_hits = lib_search_df.astype(str).merge(biomarkers_df.astype(str), on="Node", how="left")
 
     # Transpose data

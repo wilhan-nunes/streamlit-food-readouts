@@ -64,6 +64,10 @@ with st.sidebar:
     run_analysis = st.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
                              use_container_width=True)
 
+    reset_button = st.button("Reset Session", help="Click to clear the cache.", use_container_width=True, type="primary")
+    if reset_button:
+        st.session_state.clear()
+        st.rerun()
 
 # Process files when task ID and sample feature table are provided
 if run_analysis:
@@ -105,7 +109,7 @@ if run_analysis:
         st.error(f"An error occurred: {e}")
         raise
 
-else:
+if not st.session_state.get('run_analysis', False):
     st.info(
         ":information_source: Please, provide the inputs, then click Run Analysis.")
 
@@ -118,7 +122,7 @@ if "run_analysis" in st.session_state:
     st.session_state['quantitative_cols'] = quantitative_cols
     st.session_state['categorical_cols'] = categorical_cols
 
-    st.write("### Processed Food Metadata")
+    st.subheader("Processed Food Metadata")
     st.expander("Table").dataframe(result_data)
 
     # Download option
@@ -130,9 +134,15 @@ if "run_analysis" in st.session_state:
     )
 
     # Create box plot
-    st.write("### Box Plot of Food Biomarkers")
-    st.selectbox('Select categorical variable for x-axis',categorical_cols, key='x_variable')
-    st.selectbox('Select numerical variable for y-axis', quantitative_cols, key='y_variable')
+    st.markdown("---")
+    st.subheader("Box Plot of Food Biomarkers")
+
+    col_1, col_2 = st.columns(2)
+    with col_1:
+        st.selectbox('Select categorical variable for x-axis', categorical_cols, key='x_variable')
+    with col_2:
+        st.selectbox('Select numerical variable for y-axis', quantitative_cols, key='y_variable')
+
     box_plot_fig, box_plot_svg = create_food_boxplot(
         result_data,
         x_variable=st.session_state.get('x_variable', 'Classifier'),
@@ -148,7 +158,8 @@ if "run_analysis" in st.session_state:
     )
 
     # Create PCA visualizations
-    st.write("### PCA Visualizations")
+    st.markdown("---")
+    st.subheader("PCA Visualizations")
     #input for PCA
     col1, col2 = st.columns(2)
     with col1:
@@ -163,7 +174,7 @@ if "run_analysis" in st.session_state:
         classifier_col=classifier_col if classifier_col else 'Classifier',
         filter_patterns=['Omni', 'Vegan'],
         title_prefix="PCA NIST food readout",
-        n_components= st.session_state.get('n_components', 4),
+        n_components= n_components,
         metadata_cols=['filename', 'Sample', 'description', 'Classifier', 'Sub_classifier']
     )
 
@@ -177,16 +188,23 @@ if "run_analysis" in st.session_state:
         st.pyplot(mpl_figure, use_container_width=True)
     with col2:
         st.markdown("") #spacer
+        variance_ratios = [pca_info['explained_variance_ratio'][i] for i in range(n_components)]
+        st.markdown(
+            f"Explained Variance Ratios: <br>"
+            f"{', '.join([f'PC{i+1}={variance_ratios[i]:.2f}%' for i in range(n_components)])}",
+            unsafe_allow_html=True
+        )
         st.markdown(
             f"Explained variance: <br>"
-            f"PC1={pca_info['explained_variance_ratio'][0]:.2f}%, PC2={pca_info['explained_variance_ratio'][1]:.2f}%", unsafe_allow_html=True)
+            f"PC1={pca_info['explained_variance_ratio'][0]:.2f}%, PC2={pca_info['explained_variance_ratio'][1]:.2f}%<br>", unsafe_allow_html=True)
         st.markdown(f"Number of features used: {pca_info['n_features']}")
         st.expander('Feature Names', expanded=False).markdown(
             f"{', '.join(pca_info['feature_names'])}...", unsafe_allow_html=False)
     # st.image(svg_string)
 
     ## Volcano plot
-    st.write("### Volcano Plot")
+    st.markdown("---")
+    st.subheader("Volcano Plot")
 
     col1, col2, col3 = st.columns(3)
 
@@ -223,3 +241,8 @@ if "run_analysis" in st.session_state:
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
+else:
+    with open('sop_food_readout.md', 'r') as f:
+        sop_content = f.read()
+    st.markdown(sop_content, unsafe_allow_html=True)

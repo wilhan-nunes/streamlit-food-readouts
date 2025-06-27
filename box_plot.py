@@ -134,20 +134,16 @@ def create_food_boxplot(df, x_variable='classifier', y_variable='Spinach',
     fig.update_layout(
         title=dict(
             text=title,
-            x=0.5,
-            font=dict(size=16, color="black")
+            # x=0.5,
+            font=dict(size=18, color="black")
         ),
         xaxis=dict(
             title=dict(text="Group", font=dict(size=14)),
             tickfont=dict(size=12),
-            # linecolor="black",
-            # linewidth=1.5
         ),
         yaxis=dict(
             title=dict(text="Relative Intensity", font=dict(size=14)),
             tickfont=dict(size=12),
-            # linecolor="black",
-            # linewidth=1.5
         ),
         plot_bgcolor="white",
         paper_bgcolor="white",
@@ -158,65 +154,58 @@ def create_food_boxplot(df, x_variable='classifier', y_variable='Spinach',
         margin=dict(l=60, r=60, t=80, b=60)
     )
 
-    # Add border around plot
-    # fig.update_layout(
-    #     shapes=[
-    #         dict(
-    #             type="rect",
-    #             xref="paper", yref="paper",
-    #             x0=0, y0=0, x1=1, y1=1,
-    #             line=dict(color="black", width=2),
-    #             fillcolor="rgba(0,0,0,0)"
-    #         )
-    #     ]
-    # )
-
     # Return SVG string or figure object
     return fig, fig.to_image(format="svg", engine="kaleido").decode('utf-8')
 
-# # Example usage function
-# def demonstrate_usage():
-#     """
-#     Demonstrate how to use the create_food_boxplot function
-#     """
-#     # Create sample data
-#     np.random.seed(42)
-#     sample_data = {
-#         'filename': ['Vegan_sample_1.txt', 'Vegan_sample_2.txt', 'Vegan_sample_3.txt',
-#                      'Omni_sample_1.txt', 'Omni_sample_2.txt', 'Omni_sample_3.txt'] * 10,
-#         'Classifier': ['Vegan'] * 30 + ['Omnivore'] * 30,
-#         'Spinach': np.concatenate([
-#             np.random.normal(5, 1.5, 30),  # Vegan group
-#             np.random.normal(7, 1.8, 30)  # Omnivore group
-#         ]),
-#         'Tomato': np.concatenate([
-#             np.random.normal(8, 2, 30),  # Vegan group
-#             np.random.normal(6, 1.5, 30)  # Omnivore group
-#         ])
-#     }
-#
-#     df = pd.DataFrame(sample_data)
-#
-#     # Create box plot
-#     svg_result = create_food_boxplot(
-#         df,
-#         x_variable='Classifier',
-#         y_variable='Spinach',
-#         title="Spinach Readout Analysis",
-#         return_svg=False,
-#     )
-#
-#     print("Box plot created successfully!")
-#     print("Function parameters:")
-#     print("- df: Your dataframe")
-#     print("- x_variable: Column for grouping (default: 'Classifier')")
-#     print("- y_variable: Column for measurements (default: 'Spinach')")
-#     print("- filter_pattern: Regex for filename filtering (default: r'Vegan|Omni')")
-#     print("- comparison_groups: Groups to compare (default: ['Vegan', 'Omnivore'])")
-#     print("- title: Plot title")
-#     print("- return_svg: Return SVG string (True) or plotly figure (False)")
-#
-#     return svg_result
-#
-# # Uncomment the line below to see a demonstration
-# # demonstrate_usage()
+
+if __name__ == '__main__':
+    import numpy as np
+    import pandas as pd
+
+    # Example usage function
+    def demonstrate_usage():
+        """
+        Demonstrate how to use the create_food_boxplot function
+        """
+        # Create sample data
+        np.random.seed(42)
+        sample_data = {
+            'filename': ['Vegan_sample_1.txt', 'Vegan_sample_2.txt', 'Vegan_sample_3.txt',
+                         'Omni_sample_1.txt', 'Omni_sample_2.txt', 'Omni_sample_3.txt'] * 10,
+            'Classifier': ['Vegan'] * 30 + ['Omnivore'] * 30,
+            'Spinach': np.concatenate([
+                np.random.normal(5, 1.5, 30),  # Vegan group
+                np.random.normal(7, 1.8, 30)  # Omnivore group
+            ]),
+            'Tomato': np.concatenate([
+                np.random.normal(8, 2, 30),  # Vegan group
+                np.random.normal(6, 1.5, 30)  # Omnivore group
+            ])
+        }
+
+        df = pd.DataFrame(sample_data)
+
+        # Create box plot
+        figure, figure_svg = create_food_boxplot(
+            df,
+            x_variable='Classifier',
+            y_variable='Spinach',
+            title="Spinach Readout Analysis",
+            return_svg=False,
+        )
+
+        print("Box plot created successfully!")
+        print("Function parameters:")
+        print("- df: Your dataframe")
+        print("- x_variable: Column for grouping (default: 'Classifier')")
+        print("- y_variable: Column for measurements (default: 'Spinach')")
+        print("- filter_pattern: Regex for filename filtering (default: r'Vegan|Omni')")
+        print("- comparison_groups: Groups to compare (default: ['Vegan', 'Omnivore'])")
+        print("- title: Plot title")
+        print("- return_svg: Return SVG string (True) or plotly figure (False)")
+
+        return figure
+
+    # Uncomment the line below to see a demonstration
+    fig, fig_svg = demonstrate_usage()
+    fig.show()
