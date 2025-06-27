@@ -1,5 +1,3 @@
-## **SOP for Food Readout from untargeted metabolomics data**
-
 This is an overview of the standard operating procedure (SOP) for generating food readouts from untargeted metabolomics data using GNPS2 and Food-MetaboApp. This SOP is designed to help researchers identify food molecules in their datasets and generate dietary intake readouts.
 
 **To use this app ([Step 3](#step-3-food-readout-generation-with-food-metaboapp))**, you will need to have completed the following steps:

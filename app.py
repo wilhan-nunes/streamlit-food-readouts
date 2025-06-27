@@ -17,17 +17,41 @@ BADGE_QUANT_TABLE_ = ":orange-badge[Quant Table]"
 
 BIOMARKERS_FOLDER = 'data/biomarker_tables'
 
-# Streamlit app title
-st.title("Food Biomarkers Analysis")
+#TODO populate other examples
+EXAMPLES_CONFIG = {
+    "load_example_nist": {'button_label': "NIST Vegan/Omnivore dataset",
+                          'library_results': 'examples/01_NIST_library_search_results.tsv',
+                          'quant_table': 'examples/01_NIST_Vegan_Ominvore_iimn_gnps_quant.csv',
+                          'metadata_file': 'examples/01_NIST_Vegan_Omnivore_metadata.csv'},
+    # "load_example_2": {'button_label': "Example 2: ...",
+    #                    'library_results': 'examples/02_example2.tsv',
+    #                    'quant_table': 'examples/02_example2.csv',
+    #                    'metadata_file': 'examples/02_example2.csv'},
+    # "load_example_3": {'button_label': "Example 3: ...",
+    #                    'library_results': 'examples/03_example3.tsv',
+    #                    'quant_table': 'examples/03_example3.csv',
+    #                    'metadata_file': 'examples/03_example3.csv'},
+}
 
-#defining query params to populate input fields
+# Streamlit app config and title
+st.set_page_config(layout="wide")
+st.title("Estimation of Dietary intake from untargeted metabolomics data")
+
+# defining query params to populate input fields
 query_params = st.query_params
-lib_task_id = query_params.get('lib_task_id', '')
+lib_task_id = query_params.get('lib_task_id', '58e7d007420f428dbf4cdb5ac547e3e6')
 quant_task_id = query_params.get('quant_task_id', '')
 
 # Sidebar inputs
 with st.sidebar:
-    st.header("Inputs")
+    st.header("Inputs", help='Provide the necessary inputs to run the analysis or select an example below.')
+    with st.expander("Example Datasets", expanded=False):
+        for name in EXAMPLES_CONFIG:
+            button_label = EXAMPLES_CONFIG.get(name)['button_label']
+            button_key = name
+
+            st.button(button_label, type='tertiary', key=button_key,
+                      help='Please also select the biomarkers file below to run with this example.')
 
     files = os.listdir(BIOMARKERS_FOLDER)
     BIOMARKERS_FILES = [f for f in files if f.endswith(('.csv', '.tsv'))]
@@ -37,6 +61,7 @@ with st.sidebar:
         BIOMARKERS_FILES,
         help="Choose the biomarkers file to use for the analysis."
     )
+    biomarker_filepath = os.path.join(BIOMARKERS_FOLDER, selected_biomarkers_file)
 
     lib_search_task_id = st.text_input(f"{BADGE_LIBRARY_} Library Search Workflow Task ID (GNPS2)",
                                        help="Enter the Task ID from a Library Search Workflow to retrieve the library search results.",
@@ -64,45 +89,73 @@ with st.sidebar:
     run_analysis = st.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
                              use_container_width=True)
 
-    reset_button = st.button("Reset Session", help="Click to clear the cache.", use_container_width=True, type="primary")
+    reset_button = st.button("Reset Session", help="Click to clear the cache.", use_container_width=True,
+                             type="primary")
     if reset_button:
         st.session_state.clear()
         st.rerun()
 
 # Process files when task ID and sample feature table are provided
-if run_analysis:
+# Check if any example button was pressed
+example_run = [name for name in st.session_state.keys() if name.startswith('load_example_') and st.session_state[name]]
+
+if run_analysis or example_run:
     st.session_state['run_analysis'] = True
     try:
-        # Retrieve lib_search using the task ID
-        with st.spinner("Downloading library result table..."):
-            lib_search = fetch_file(lib_search_task_id.strip(), "merged_results.tsv", type="library_search_table", save_to_disk=False,
-                                    return_content=True)
-            st.empty().success("Library result table downloaded successfully!")
+        if run_analysis:
+            # Retrieve lib_search using the task ID
+            with st.spinner("Downloading library result table..."):
+                lib_search = fetch_file(lib_search_task_id.strip(), "merged_results.tsv", type="library_search_table",
+                                        save_to_disk=False,
+                                        return_content=True)
+                st.empty().success("Library result table downloaded successfully!")
 
-        with st.spinner("Downloading FBMN Quant table from task ID..."):
-            if sample_quant_table_file is None:
-                sample_quant_table_file = fetch_file(quant_table_task_id.strip(), "quant_table.csv",
-                                                     type="quant_table",
-                                                     save_to_disk=False,
-                                                     return_content=True)
-                quant_table_contents = BytesIO(sample_quant_table_file)
-                st.success(f"Quant table downloaded successfully from task {quant_table_task_id}!", icon="🔗")
-            else:
-                st.success("Sample Feature Table loaded from uploaded file successfully!", icon="📂")
-                quant_table_contents = sample_quant_table_file
+            with st.spinner("Downloading FBMN Quant table from task ID..."):
+                if sample_quant_table_file is None:
+                    sample_quant_table_file = fetch_file(quant_table_task_id.strip(), "quant_table.csv",
+                                                         type="quant_table",
+                                                         save_to_disk=False,
+                                                         return_content=True)
+                    quant_table_contents = BytesIO(sample_quant_table_file)
+                    st.success(f"Quant table downloaded successfully from task {quant_table_task_id}!", icon="🔗")
+                else:
+                    st.success("Sample Feature Table loaded from uploaded file successfully!", icon="📂")
+                    quant_table_contents = sample_quant_table_file
 
-        # Load user-uploaded sample feature table
-        sample_quant_table_df = pd.read_csv(quant_table_contents, sep=None, engine='python')
+            # Load user-uploaded sample feature table
+            sample_quant_table_df = pd.read_csv(quant_table_contents, sep=None, engine='python')
 
-        # Process data
-        with st.spinner("Processing data..."):
-            biomarker_filepath = os.path.join(BIOMARKERS_FOLDER, selected_biomarkers_file)
-            result = process_food_biomarkers(biomarker_filepath, lib_search, metadata_file, sample_quant_table_df)
-            st.success("Data processed successfully!")
+            # Process data
+            with st.spinner("Processing data..."):
+                result = process_food_biomarkers(biomarker_filepath, lib_search, metadata_file, sample_quant_table_df)
+                st.toast("Data processed successfully!")
 
-        # Load and display the resulting table
-        st.session_state.result_file = result['result_file_path']
-        st.session_state.result_dataframe = result['result_df']
+            # Load and display the resulting table
+            st.session_state.result_file = result['result_file_path']
+            st.session_state.result_dataframe = result['result_df']
+
+        else:
+            example_files_dict = EXAMPLES_CONFIG.get(example_run[0], None)
+            # Load example data from predefined files for demo mode
+            with st.spinner("Loading example library result table..."):
+                lib_search = open(example_files_dict.get('library_results'), 'rb').read()
+                st.toast("Example library result table loaded successfully!")
+
+            with st.spinner("Loading example quant table..."):
+                sample_quant_table_df = pd.read_csv(example_files_dict.get('quant_table'))
+                st.toast("Example quant table loaded successfully!", icon="📂")
+
+            with st.spinner("Loading example metadata file..."):
+                metadata_file = example_files_dict.get('metadata_file')
+                st.toast("Example metadata file loaded successfully!", icon="📂")
+
+            with st.spinner("Processing example data..."):
+                result = process_food_biomarkers(biomarker_filepath, lib_search, metadata_file, sample_quant_table_df)
+                st.toast("Example data processed successfully!")
+
+            st.session_state.result_file = result['result_file_path']
+            st.session_state.result_dataframe = result['result_df']
+
 
 
     except Exception as e:
@@ -122,13 +175,14 @@ if "run_analysis" in st.session_state:
     st.session_state['quantitative_cols'] = quantitative_cols
     st.session_state['categorical_cols'] = categorical_cols
 
-    st.subheader("Processed Food Metadata")
-    st.expander("Table").dataframe(result_data)
+    st.subheader("Processed Food Metadata Table")
+    st.expander("Click to expand").dataframe(result_data)
 
     # Download option
     st.download_button(
         label="Download Processed Data",
         data=result_data.to_csv(sep='\t', index=False),
+        icon=":material/download:",
         file_name="food_metadata.tsv",
         mime="text/csv"
     )
@@ -140,19 +194,25 @@ if "run_analysis" in st.session_state:
     col_1, col_2 = st.columns(2)
     with col_1:
         st.selectbox('Select categorical variable for x-axis', categorical_cols, key='x_variable')
+        if 'x_variable' in st.session_state:
+            available = result_data[st.session_state.x_variable].unique().tolist()
+            selected_groups = st.multiselect("Select the groups to compare", available, default=available[:2],)
     with col_2:
-        st.selectbox('Select numerical variable for y-axis', quantitative_cols, key='y_variable')
+        st.multiselect('Select numerical variable for y-axis', quantitative_cols, key='y_variables')
 
     box_plot_fig, box_plot_svg = create_food_boxplot(
         result_data,
         x_variable=st.session_state.get('x_variable', 'Classifier'),
-        y_variable=st.session_state.get('y_variable', 'Spinach'),
-        title=f"{st.session_state.y_variable} Readout Analysis",
-           )
+        y_variables=st.session_state.get('y_variables', ['Spinach']),
+        filter_pattern="|".join(selected_groups),
+        comparison_groups=selected_groups,
+        title=f"{",".join(st.session_state.y_variables)} Readout Analysis",
+    )
     st.plotly_chart(box_plot_fig, use_container_width=True)
     st.download_button(
         label="Download Box Plot SVG",
         data=box_plot_svg,
+        icon=":material/download:",
         file_name="food_box_plot.svg",
         mime="image/svg+xml"
     )
@@ -160,7 +220,7 @@ if "run_analysis" in st.session_state:
     # Create PCA visualizations
     st.markdown("---")
     st.subheader("PCA Visualizations")
-    #input for PCA
+    # input for PCA
     col1, col2 = st.columns(2)
     with col1:
         n_components = st.number_input("Number of PCA components", min_value=2, max_value=10, value=4, step=1)
@@ -168,14 +228,20 @@ if "run_analysis" in st.session_state:
     with col2:
         # df is your DataFrame
         classifier_col = st.selectbox('Select Classifier Column', [None] + categorical_cols, key='classifier_col')
+        groups_to_compare = st.multiselect(
+            'Select Groups to Compare',
+            result_data[classifier_col].unique().tolist() if classifier_col else [],
+            default=result_data[classifier_col].unique().tolist()[:2] if classifier_col else [],
+            key='groups_to_compare'
+        )
 
     results = create_pca_visualizations(
         result_data,
         classifier_col=classifier_col if classifier_col else 'Classifier',
-        filter_patterns=['Omni', 'Vegan'],
+        filter_patterns=groups_to_compare,
         title_prefix="PCA NIST food readout",
-        n_components= n_components,
-        metadata_cols=['filename', 'Sample', 'description', 'Classifier', 'Sub_classifier']
+        n_components=n_components,
+        metadata_cols=categorical_cols,
     )
 
     plotly_figure = results['plotly_fig']
@@ -187,16 +253,17 @@ if "run_analysis" in st.session_state:
     with col1:
         st.pyplot(mpl_figure, use_container_width=True)
     with col2:
-        st.markdown("") #spacer
+        st.markdown("")  # spacer
         variance_ratios = [pca_info['explained_variance_ratio'][i] for i in range(n_components)]
         st.markdown(
             f"Explained Variance Ratios: <br>"
-            f"{', '.join([f'PC{i+1}={variance_ratios[i]:.2f}%' for i in range(n_components)])}",
+            f"{', '.join([f'PC{i + 1}={variance_ratios[i]:.2f}%' for i in range(n_components)])}",
             unsafe_allow_html=True
         )
         st.markdown(
             f"Explained variance: <br>"
-            f"PC1={pca_info['explained_variance_ratio'][0]:.2f}%, PC2={pca_info['explained_variance_ratio'][1]:.2f}%<br>", unsafe_allow_html=True)
+            f"PC1={pca_info['explained_variance_ratio'][0]:.2f}%, PC2={pca_info['explained_variance_ratio'][1]:.2f}%<br>",
+            unsafe_allow_html=True)
         st.markdown(f"Number of features used: {pca_info['n_features']}")
         st.expander('Feature Names', expanded=False).markdown(
             f"{', '.join(pca_info['feature_names'])}...", unsafe_allow_html=False)
@@ -225,7 +292,6 @@ if "run_analysis" in st.session_state:
     with col3:
         top_n_labels = st.number_input('Top N labels', value=15, min_value=0, max_value=50, step=1)
         show_labels = st.checkbox('Show labels', value=True)
-
 
     if group_col and group1 and group2:
         fig = create_interactive_volcano_plot(

@@ -1,80 +1,159 @@
 import plotly.express as px
 import plotly.graph_objects as go
 from scipy.stats import ttest_ind
+import numpy as np
+import pandas as pd
+from typing import List
 
 
-def create_food_boxplot(df, x_variable='classifier', y_variable='Spinach',
-                        filter_pattern=r'Vegan|Omni', comparison_groups=['Vegan', 'Omnivore'],
-                        title="Food Readout Analysis"):
-    """
-    Create a box plot with statistical comparisons for food analysis data.
+def create_food_boxplot(df, x_variable:str, y_variables:str,
+                              filter_pattern:str, comparison_groups:List,
+                              title:str):
+    """Create overlay box plots with statistical comparisons for multiple variables in food analysis data. Each variable gets its own group of boxes side by side.
 
     Parameters:
     -----------
     df : pandas.DataFrame
         Input dataframe containing the data
-    x_variable : str, default 'Classifier'
+    x_variable : str,
         Column name for x-axis grouping variable
-    y_variable : str, default 'Spinach'
-        Column name for y-axis measurement variable
+    y_variables : list,
+        List of column names for y-axis measurement variables
     filter_pattern : str, default r'Vegan|Omni'
         Regex pattern to filter filename column
     comparison_groups : list, default ['Vegan', 'Omnivore']
         Groups to compare statistically
     title : str, default "Food Readout Analysis"
         Plot title
-    return_svg : bool, default True
-        Whether to return SVG string or plotly figure object
 
     Returns:
     --------
-    str or plotly.graph_objects.Figure
-        SVG string if return_svg=True, otherwise plotly figure
+    tuple
+        (plotly.graph_objects.Figure, str) - Figure object and SVG string
     """
 
     # Filter data based on filename pattern
     if 'filename' in df.columns:
-        filtered_df = df[df['filename'].str.contains(filter_pattern, na=False, regex=True)].copy()
+        filtered_df = df[df[x_variable].str.contains(filter_pattern, na=False, regex=True)].copy()
     else:
         filtered_df = df.copy()
 
     # Ensure the required columns exist
     if x_variable not in filtered_df.columns:
         raise ValueError(f"Column '{x_variable}' not found in dataframe")
-    if y_variable not in filtered_df.columns:
-        raise ValueError(f"Column '{y_variable}' not found in dataframe")
 
-    # Create the box plot
-    fig = go.Figure()
+    missing_vars = [var for var in y_variables if var not in filtered_df.columns]
+    if missing_vars:
+        raise ValueError(f"Columns {missing_vars} not found in dataframe")
 
-    # Get unique groups
+    # Get unique groups and colors
     groups = filtered_df[x_variable].unique()
     colors = px.colors.qualitative.Set1[:len(groups)]
 
-    # Add box plots for each group
-    for i, group in enumerate(groups):
-        group_data = filtered_df[filtered_df[x_variable] == group]
+    fig = go.Figure()
 
-        fig.add_trace(go.Box(
-            y=group_data[y_variable],
-            x=[group] * len(group_data),
-            name=group,
-            boxpoints='all',
-            jitter=0.3,
-            pointpos=0,
-            marker=dict(
-                color=colors[i % len(colors)],
-                size=6,
-                opacity=0.6,
-                line=dict(width=2, color='DarkSlateGrey')
-            ),
-            line=dict(color=colors[i % len(colors)], width=2),
-            fillcolor=colors[i % len(colors)],
-            opacity=0.7
-        ))
+    # Calculate spacing for variables and groups
+    n_vars = len(y_variables)
+    n_groups = len(groups)
+    group_width = 0.8  # Total width for each variable's group of boxes
+    box_width = group_width / n_groups  # Width of individual boxes
+    variable_spacing = 1.2  # Space between variable groups
 
-    # Perform statistical test if comparison groups are specified
-    p_value = None
+    # Create x-positions and labels
+    x_positions = []
+    x_labels = []
+
+    for var_idx, y_var in enumerate(y_variables):
+        var_center = var_idx * variable_spacing
+        for group_idx, group in enumerate(groups):
+            # Position boxes within each variable group
+            x_pos = var_center + (group_idx - (n_groups - 1) / 2) * box_width
+            x_positions.append(x_pos)
+        x_labels.append(y_var)
+
+    # Add box plots
+    pos_idx = 0
+    legend_added = set()  # Track which groups have been added to legend
+
+    for var_idx, y_var in enumerate(y_variables):
+        for group_idx, group in enumerate(groups):
+            group_data = filtered_df[filtered_df[x_variable] == group]
+
+            fig.add_trace(go.Box(
+                y=group_data[y_var],
+                x=[x_positions[pos_idx]] * len(group_data),
+                name=group,
+                boxpoints='all',
+                jitter=0.3,
+                pointpos=0,
+                marker=dict(
+                    color=colors[group_idx % len(colors)],
+                    size=4,
+                    opacity=0.6,
+                    line=dict(width=1, color='DarkSlateGrey')
+                ),
+                line=dict(color=colors[group_idx % len(colors)], width=2),
+                fillcolor=colors[group_idx % len(colors)],
+                opacity=0.7,
+                width=box_width * 0.8,  # Make boxes slightly narrower
+                showlegend=group not in legend_added,  # Only show each group once in legend
+                legendgroup=group  # Group legend items by group name
+            ))
+
+            if group not in legend_added:
+                legend_added.add(group)
+
+            pos_idx += 1
+
+        # Add statistical annotations for each variable
+        _add_statistical_annotation_overlay(fig, filtered_df, x_variable, y_var,
+                                            comparison_groups, groups, var_idx,
+                                            variable_spacing, box_width)
+
+    # Calculate x-axis tick positions (center of each variable group)
+    x_tick_positions = [i * variable_spacing for i in range(n_vars)]
+
+    # Update layout
+    fig.update_layout(
+        title=dict(
+            text=title,
+            font=dict(size=18, color="black")
+        ),
+        xaxis=dict(
+            title=dict(text="Variables", font=dict(size=14)),
+            tickmode='array',
+            tickvals=x_tick_positions,
+            ticktext=y_variables,
+            tickfont=dict(size=12),
+            range=[-0.5, (n_vars - 1) * variable_spacing + 0.5]
+        ),
+        yaxis=dict(
+            title=dict(text="Relative Intensity", font=dict(size=14)),
+            tickfont=dict(size=12)
+        ),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        font=dict(family="Arial, sans-serif"),
+        height=600,
+        width=max(600, n_vars * 200 + 200),  # Dynamic width based on number of variables
+        margin=dict(l=60, r=60, t=80, b=60),
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="left",
+            x=1.02
+        )
+    )
+
+    return fig, fig.to_image(format="svg", engine="kaleido").decode('utf-8')
+
+
+def _add_statistical_annotation_overlay(fig, filtered_df, x_variable, y_variable,
+                                        comparison_groups, groups, var_idx,
+                                        variable_spacing, box_width):
+    """Add statistical annotation for overlay plot"""
+
     if len(comparison_groups) == 2 and all(group in groups for group in comparison_groups):
         group1_data = filtered_df[filtered_df[x_variable] == comparison_groups[0]][y_variable].dropna()
         group2_data = filtered_df[filtered_df[x_variable] == comparison_groups[1]][y_variable].dropna()
@@ -87,21 +166,37 @@ def create_food_boxplot(df, x_variable='classifier', y_variable='Spinach',
             if p_value < 0.001:
                 p_text = "p < 0.001"
             elif p_value < 0.01:
-                p_text = f"p < 0.01"
+                p_text = "p < 0.01"
             elif p_value < 0.05:
-                p_text = f"p < 0.05"
+                p_text = "p < 0.05"
             else:
                 p_text = f"p = {p_value:.3f}"
 
-            # Add significance annotation
-            y_max = filtered_df[y_variable].max()
-            y_range = filtered_df[y_variable].max() - filtered_df[y_variable].min()
+            # Calculate annotation position for this variable
+            var_data = filtered_df[y_variable]
+            y_max = var_data.max()
+            y_range = var_data.max() - var_data.min()
             annotation_y = y_max + 0.1 * y_range
+
+            # Calculate x positions for the statistical annotation
+            var_center = var_idx * variable_spacing
+            n_groups = len(groups)
+
+            # Find positions of comparison groups
+            group1_idx = list(groups).index(comparison_groups[0])
+            group2_idx = list(groups).index(comparison_groups[1])
+
+            x1 = var_center + (group1_idx - (n_groups - 1) / 2) * box_width
+            x2 = var_center + (group2_idx - (n_groups - 1) / 2) * box_width
+
+            # Make sure x1 < x2 for the line
+            if x1 > x2:
+                x1, x2 = x2, x1
 
             # Add horizontal line for significance
             fig.add_shape(
                 type="line",
-                x0=0, x1=1,
+                x0=x1, x1=x2,
                 y0=annotation_y, y1=annotation_y,
                 line=dict(color="black", width=1)
             )
@@ -109,65 +204,34 @@ def create_food_boxplot(df, x_variable='classifier', y_variable='Spinach',
             # Add vertical lines at ends
             fig.add_shape(
                 type="line",
-                x0=0, x1=0,
+                x0=x1, x1=x1,
                 y0=annotation_y, y1=annotation_y - 0.03 * y_range,
                 line=dict(color="black", width=1)
             )
 
             fig.add_shape(
                 type="line",
-                x0=1, x1=1,
+                x0=x2, x1=x2,
                 y0=annotation_y, y1=annotation_y - 0.03 * y_range,
                 line=dict(color="black", width=1)
             )
 
-            # Add p-value text
+            # Add p-value text at the center
             fig.add_annotation(
-                x=0.5,
+                x=(x1 + x2) / 2,
                 y=annotation_y + 0.02 * y_range,
                 text=p_text,
                 showarrow=False,
-                font=dict(size=12, color="black")
+                font=dict(size=10, color="black")
             )
 
-    # Update layout
-    fig.update_layout(
-        title=dict(
-            text=title,
-            # x=0.5,
-            font=dict(size=18, color="black")
-        ),
-        xaxis=dict(
-            title=dict(text="Group", font=dict(size=14)),
-            tickfont=dict(size=12),
-        ),
-        yaxis=dict(
-            title=dict(text="Relative Intensity", font=dict(size=14)),
-            tickfont=dict(size=12),
-        ),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        font=dict(family="Arial, sans-serif"),
-        showlegend=False,
-        width=550,
-        height=600,
-        margin=dict(l=60, r=60, t=80, b=60)
-    )
 
-    # Return SVG string or figure object
-    return fig, fig.to_image(format="svg", engine="kaleido").decode('utf-8')
-
-
+# Example usage
 if __name__ == '__main__':
-    import numpy as np
-    import pandas as pd
-
-    # Example usage function
     def demonstrate_usage():
-        """
-        Demonstrate how to use the create_food_boxplot function
-        """
-        # Create sample data
+        """Demonstrate the multi-variable overlay box plot function"""
+
+        # Create sample data with multiple variables
         np.random.seed(42)
         sample_data = {
             'filename': ['Vegan_sample_1.txt', 'Vegan_sample_2.txt', 'Vegan_sample_3.txt',
@@ -180,32 +244,54 @@ if __name__ == '__main__':
             'Tomato': np.concatenate([
                 np.random.normal(8, 2, 30),  # Vegan group
                 np.random.normal(6, 1.5, 30)  # Omnivore group
+            ]),
+            'Lettuce': np.concatenate([
+                np.random.normal(6, 1.2, 30),  # Vegan group
+                np.random.normal(5, 1.8, 30)  # Omnivore group
+            ]),
+            'Carrot': np.concatenate([
+                np.random.normal(7, 1.8, 30),  # Vegan group
+                np.random.normal(8, 2.2, 30)  # Omnivore group
             ])
         }
 
         df = pd.DataFrame(sample_data)
 
-        # Create box plot
-        figure, figure_svg = create_food_boxplot(
+        print("=== Multi-Variable Overlay Box Plot ===\n")
+
+        # Example with multiple variables
+        print("Creating overlay plot for multiple variables...")
+        fig, svg = create_food_boxplot(
             df,
             x_variable='Classifier',
-            y_variable='Spinach',
-            title="Spinach Readout Analysis",
-            return_svg=False,
+            y_variables=['Spinach', 'Tomato', 'Lettuce', 'Carrot'],
+            title="Multi-Variable Food Analysis (Overlay)",
+            comparison_groups=['Vegan', 'Omnivore']
         )
 
-        print("Box plot created successfully!")
-        print("Function parameters:")
+        print("Plot created successfully!")
+        print("\n=== Usage ===")
+        print("Parameters:")
         print("- df: Your dataframe")
-        print("- x_variable: Column for grouping (default: 'Classifier')")
-        print("- y_variable: Column for measurements (default: 'Spinach')")
+        print("- x_variable: Column for grouping (default: 'classifier')")
+        print("- y_variables: List of columns for measurements (default: ['Spinach'])")
         print("- filter_pattern: Regex for filename filtering (default: r'Vegan|Omni')")
-        print("- comparison_groups: Groups to compare (default: ['Vegan', 'Omnivore'])")
+        print("- comparison_groups: Groups to compare statistically (default: ['Vegan', 'Omnivore'])")
         print("- title: Plot title")
-        print("- return_svg: Return SVG string (True) or plotly figure (False)")
 
-        return figure
+        print(f"\nExample call:")
+        print("fig, svg = create_food_boxplot_multi(")
+        print("    df,")
+        print("    x_variable='Classifier',")
+        print("    y_variables=['Spinach', 'Tomato', 'Lettuce'],")
+        print("    title='My Analysis'")
+        print(")")
 
-    # Uncomment the line below to see a demonstration
-    fig, fig_svg = demonstrate_usage()
-    fig.show()
+        return fig
+
+
+    # Run demonstration
+    fig = demonstrate_usage()
+
+    # Uncomment to show plot
+    # fig.show()
