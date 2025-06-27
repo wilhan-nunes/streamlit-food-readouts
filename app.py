@@ -303,7 +303,8 @@ if "run_analysis" in st.session_state:
             fc_threshold=fc_threshold,
             title=f"Interactive Volcano Plot: {group1} vs {group2}",
             show_labels=show_labels,
-            top_n_labels=int(top_n_labels)
+            top_n_labels=int(top_n_labels),
+            exclude_cols=categorical_cols,
         )
 
         st.plotly_chart(fig, use_container_width=True)

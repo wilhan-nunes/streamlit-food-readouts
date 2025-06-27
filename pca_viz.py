@@ -1,3 +1,5 @@
+from typing import List
+
 import pandas as pd
 import numpy as np
 from sklearn.decomposition import PCA
@@ -12,11 +14,11 @@ import io
 import base64
 from scipy import stats
 
-def create_pca_visualizations(data, classifier_col='Classifier',
-                            filter_patterns=['Omni', 'Vegan'], 
-                            title_prefix="PCA NIST food readout",
-                            n_components=4,
-                            metadata_cols=['Sample', 'description', 'Classifier', 'Sub_classifier']):
+def create_pca_visualizations(data: pd.DataFrame, classifier_col:str,
+                            filter_patterns:str,
+                            title_prefix:str,
+                            n_components:int,
+                            metadata_cols:List):
     """
     Create PCA visualizations returning both Plotly figure and SVG string.
     
