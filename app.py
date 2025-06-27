@@ -39,7 +39,7 @@ st.title("Estimation of Dietary intake from untargeted metabolomics data")
 
 # defining query params to populate input fields
 query_params = st.query_params
-lib_task_id = query_params.get('lib_task_id', '58e7d007420f428dbf4cdb5ac547e3e6')
+lib_task_id = query_params.get('lib_task_id', '')
 quant_task_id = query_params.get('quant_task_id', '')
 
 # Sidebar inputs
