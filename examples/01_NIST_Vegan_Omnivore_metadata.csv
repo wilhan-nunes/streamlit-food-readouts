@@ -1,0 +1,24 @@
+Sample,filename,description,Classifier,Sub_classifier
+J139,J139.mzML,cooked Tilapia,Meat,Seafood
+J140,J140.mzML,cooked Salmon,Meat,Seafood
+J141,J141.mzML,cooked chicken thighs,Meat,chicken
+J142,J142.mzML,cooked pork loin,Meat,red_meat
+J143,J143.mzML,cooked Beef loin,Meat,red_meat
+MK,N12MK_MP_09.mzML,Milk1,Dairy,Milk
+MK,N12MK_VL_09.mzML,Milk2,Dairy,Milk
+MK,N12MK_HZ_09.mzML,Milk3,Dairy,Milk
+YG,N12YG_ST_09.mzML,Yogurt1,Dairy,Yogurt
+YG,N12YG_AX_09.mzML,Yogurt2,Dairy,Yogurt
+YG,N12YG_NC_09.mzML,Yogurt3,Dairy,Yogurt
+NIST_Omnivore1_1,NIST_Omnivore1_1.mzML,Omnivore1_1,Omnivore,Omnivore_1
+NIST_Omnivore1_2,NIST_Omnivore1_2.mzML,Omnivore1_2,Omnivore,Omnivore_1
+NIST_Omnivore1_3,NIST_Omnivore1_3.mzML,Omnivore1_3,Omnivore,Omnivore_1
+NIST_Omnivore2_1,NIST_Omnivore2_1.mzML,Omnivore2_1,Omnivore,Omnivore_2
+NIST_Omnivore2_2,NIST_Omnivore2_2.mzML,Omnivore2_2,Omnivore,Omnivore_2
+NIST_Omnivore2_3,NIST_Omnivore2_3.mzML,Omnivore2_3,Omnivore,Omnivore_2
+NIST_Vegan1_1,NIST_Vegan1_1.mzML,Vegan1_1,Vegan,Vegan1
+NIST_Vegan1_2,NIST_Vegan1_2.mzML,Vegan1_2,Vegan,Vegan1
+NIST_Vegan1_3,NIST_Vegan1_3.mzML,Vegan1_3,Vegan,Vegan1
+NIST_Vegan2_1,NIST_Vegan2_1.mzML,Vegan2_1,Vegan,Vegan2
+NIST_Vegan2_2,NIST_Vegan2_2.mzML,Vegan2_2,Vegan,Vegan2
+NIST_Vegan2_3,NIST_Vegan2_3.mzML,Vegan2_3,Vegan,Vegan2
