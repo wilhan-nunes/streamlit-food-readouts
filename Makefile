@@ -14,4 +14,4 @@ server-compose-production:
 	docker-compose --compatibility -f docker-compose.yml up -d
 
 attach:
-	docker exec -i -t streamlit-food-readout /bin/bash
+	docker exec -i -t streamlit-food-readouts /bin/bash

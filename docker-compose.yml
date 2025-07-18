@@ -1,10 +1,10 @@
 version: '3'
 services:
-  streamlit-food-readout:
+  streamlit-food-readouts:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: streamlit-food-readout
+    container_name: streamlit-food-readouts
     volumes:
       - ./logs:/app/logs:rw
     networks:
