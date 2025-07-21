@@ -1,14 +1,41 @@
 import os
+import subprocess
 from io import BytesIO
 
 import pandas as pd
 import streamlit as st
+from streamlit.components.v1 import html
 
 from pca_viz import create_pca_visualizations
 from script import process_food_biomarkers
 from utils import fetch_file
 from box_plot import *
 from volcano_plot import create_interactive_volcano_plot
+
+def get_git_short_rev():
+    try:
+        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], stderr=subprocess.DEVNULL).decode().strip()
+    except subprocess.CalledProcessError:
+        return ".git/ not found"
+
+# TODO: Bump version
+app_version = "2025-07-21"
+git_hash = get_git_short_rev()
+repo_link = "https://github.com/wilhan-nunes/streamlit-food-readouts/"
+
+
+# Streamlit app config and title
+st.set_page_config(
+    page_title="Dietary Intake Analysis - MetaboApp",
+    page_icon="🧬",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={"About": (f"**App version**: {app_version} | "
+                          f"[**Git Hash**: {git_hash}]({repo_link}/commit/{git_hash})")},
+)
+
+# Add a tracking token
+html('<script async defer data-website-id="<your_website_id>" src="https://analytics.gnps2.org/umami.js"></script>', width=0, height=0)
 
 # cute badges
 BADGE_LIBRARY_ = ":green-badge[Library]"
@@ -33,8 +60,6 @@ EXAMPLES_CONFIG = {
     #                    'metadata_file': 'examples/03_example3.csv'},
 }
 
-# Streamlit app config and title
-st.set_page_config(layout="wide")
 st.title("Estimation of Dietary intake from untargeted metabolomics data")
 
 # defining query params to populate input fields
