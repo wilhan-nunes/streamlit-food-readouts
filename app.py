@@ -3,20 +3,22 @@ import subprocess
 from io import BytesIO
 
 import pandas as pd
+from gnpsdata import workflow_fbmn, taskresult
 import streamlit as st
 from streamlit.components.v1 import html
 
 from pca_viz import create_pca_visualizations
 from script import process_food_biomarkers
-from utils import fetch_file
 from box_plot import *
 from volcano_plot import create_interactive_volcano_plot
+
 
 def get_git_short_rev():
     try:
         return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], stderr=subprocess.DEVNULL).decode().strip()
     except subprocess.CalledProcessError:
         return ".git/ not found"
+
 
 # TODO: Bump version
 app_version = "2025-07-21"
@@ -99,20 +101,22 @@ with st.sidebar:
                                         help="Enter the Task ID from a FBMN Workflow to retrieve the quant table.",
                                         placeholder='enter task ID...',
                                         value=quant_task_id)
+    sample_quant_table_file = None
+    if not quant_table_task_id:
+        sample_quant_table_file = st.file_uploader(f"{BADGE_UPLOAD_QUANT_TABLE_} Upload Sample Feature Table",
+                                                   type=["csv", "tsv"])
+        if sample_quant_table_file:
+            st.success(f"{BADGE_UPLOAD_QUANT_TABLE_}  will be used for analysis.")
+        elif quant_table_task_id:
+            st.success(f"No file uploaded. {BADGE_QUANT_TABLE_} task ID will be used to fetch the quant table.")
+        else:
+            st.warning(f"Please {BADGE_UPLOAD_QUANT_TABLE_} or provide a Task ID  for {BADGE_QUANT_TABLE_}")
 
-    sample_quant_table_file = st.file_uploader(f"{BADGE_UPLOAD_QUANT_TABLE_} Upload Sample Feature Table",
-                                               type=["csv", "tsv"])
     metadata_file = st.file_uploader('Upload Metadata File', type=["csv", "tsv"])
-
-    if sample_quant_table_file:
-        st.success(f"{BADGE_UPLOAD_QUANT_TABLE_}  will be used for analysis.")
-    elif quant_table_task_id:
-        st.success(f"No file uploaded. {BADGE_QUANT_TABLE_} task ID will be used to fetch the quant table.")
-    else:
-        st.warning(f"Please {BADGE_UPLOAD_QUANT_TABLE_} or provide a Task ID  for {BADGE_QUANT_TABLE_}")
-
+    if not metadata_file:
+        st.warning("Please upload the metadata file to continue")
     run_analysis = st.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
-                             use_container_width=True)
+                             use_container_width=True, disabled=not metadata_file)
 
     reset_button = st.button("Reset Session", help="Click to clear the cache.", use_container_width=True,
                              type="primary")
@@ -139,25 +143,21 @@ if run_analysis or example_run:
         if run_analysis:
             # Retrieve lib_search using the task ID
             with st.spinner("Downloading library result table..."):
-                lib_search = fetch_file(lib_search_task_id.strip(), "merged_results.tsv", type="library_search_table",
-                                        save_to_disk=False,
-                                        return_content=True)
+                # lib_search = fetch_file(lib_search_task_id.strip(), "merged_results.tsv", type="library_search_table",
+                #                         save_to_disk=False,
+                #                         return_content=True)
+                lib_search = taskresult.get_gnps2_task_resultfile_dataframe(lib_search_task_id, "nf_output/merged_results.tsv")
                 st.empty().success("Library result table downloaded successfully!")
 
             with st.spinner("Downloading FBMN Quant table from task ID..."):
                 if sample_quant_table_file is None:
-                    sample_quant_table_file = fetch_file(quant_table_task_id.strip(), "quant_table.csv",
-                                                         type="quant_table",
-                                                         save_to_disk=False,
-                                                         return_content=True)
-                    quant_table_contents = BytesIO(sample_quant_table_file)
+                    sample_quant_table_df = workflow_fbmn.get_quantification_dataframe(quant_table_task_id, gnps2=True)
                     st.success(f"Quant table downloaded successfully from task {quant_table_task_id}!", icon="🔗")
                 else:
                     st.success("Sample Feature Table loaded from uploaded file successfully!", icon="📂")
                     quant_table_contents = sample_quant_table_file
-
-            # Load user-uploaded sample feature table
-            sample_quant_table_df = pd.read_csv(quant_table_contents, sep=None, engine='python')
+                    # Load user-uploaded sample feature table
+                    sample_quant_table_df = pd.read_csv(quant_table_contents, sep=None, engine='python')
 
             # Process data
             with st.spinner("Processing data..."):
@@ -172,7 +172,7 @@ if run_analysis or example_run:
             example_files_dict = EXAMPLES_CONFIG.get(example_run[0], None)
             # Load example data from predefined files for demo mode
             with st.spinner("Loading example library result table..."):
-                lib_search = open(example_files_dict.get('library_results'), 'rb').read()
+                lib_search = pd.read_csv(example_files_dict.get('library_results'), sep='\t')
                 st.toast("Example library result table loaded successfully!")
 
             with st.spinner("Loading example quant table..."):
@@ -268,40 +268,42 @@ if "run_analysis" in st.session_state:
             default=result_data[classifier_col].unique().tolist()[:2] if classifier_col else [],
             key='groups_to_compare'
         )
-
-    results = create_pca_visualizations(
-        result_data,
-        classifier_col=classifier_col if classifier_col else 'Classifier',
-        filter_patterns=groups_to_compare,
-        title_prefix="PCA NIST food readout",
-        n_components=n_components,
-        metadata_cols=categorical_cols,
-    )
-
-    plotly_figure = results['plotly_fig']
-    mpl_figure = results['mpl_fig']
-    svg_string = results['svg_string']
-    pca_info = results['pca_results']
-
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        st.pyplot(mpl_figure, use_container_width=True)
-    with col2:
-        st.markdown("")  # spacer
-        variance_ratios = [pca_info['explained_variance_ratio'][i] for i in range(n_components)]
-        st.markdown(
-            f"Explained Variance Ratios: <br>"
-            f"{', '.join([f'PC{i + 1}={variance_ratios[i]:.2f}%' for i in range(n_components)])}",
-            unsafe_allow_html=True
+    if classifier_col is None:
+        st.info("Select a Classifier Column above")
+    else:
+        results = create_pca_visualizations(
+            result_data,
+            classifier_col=classifier_col if classifier_col else 'Classifier',
+            filter_patterns=groups_to_compare,
+            title_prefix="PCA NIST food readout",
+            n_components=n_components,
+            metadata_cols=categorical_cols,
         )
-        st.markdown(
-            f"Explained variance: <br>"
-            f"PC1={pca_info['explained_variance_ratio'][0]:.2f}%, PC2={pca_info['explained_variance_ratio'][1]:.2f}%<br>",
-            unsafe_allow_html=True)
-        st.markdown(f"Number of features used: {pca_info['n_features']}")
-        st.expander('Feature Names', expanded=False).markdown(
-            f"{', '.join(pca_info['feature_names'])}...", unsafe_allow_html=False)
-    # st.image(svg_string)
+
+        plotly_figure = results['plotly_fig']
+        mpl_figure = results['mpl_fig']
+        svg_string = results['svg_string']
+        pca_info = results['pca_results']
+
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            st.pyplot(mpl_figure, use_container_width=True)
+        with col2:
+            st.markdown("")  # spacer
+            variance_ratios = [pca_info['explained_variance_ratio'][i] for i in range(n_components)]
+            st.markdown(
+                f"Explained Variance Ratios: <br>"
+                f"{', '.join([f'PC{i + 1}={variance_ratios[i]:.2f}%' for i in range(n_components)])}",
+                unsafe_allow_html=True
+            )
+            st.markdown(
+                f"Explained variance: <br>"
+                f"PC1={pca_info['explained_variance_ratio'][0]:.2f}%, PC2={pca_info['explained_variance_ratio'][1]:.2f}%<br>",
+                unsafe_allow_html=True)
+            st.markdown(f"Number of features used: {pca_info['n_features']}")
+            st.expander('Feature Names', expanded=False).markdown(
+                f"{', '.join(pca_info['feature_names'])}...", unsafe_allow_html=False)
+        # st.image(svg_string)
 
     ## Volcano plot
     st.markdown("---")
