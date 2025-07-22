@@ -23,7 +23,8 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file, qua
 
     # Load files
     biomarkers_df = pd.read_csv(biomarkers_file, sep=biomarkers_sep)
-    lib_search_df = pd.read_csv(BytesIO(lib_search_file), sep='\t')
+    # lib_search_df = pd.read_csv(BytesIO(lib_search_file), sep='\t')
+    lib_search_df = lib_search_file
     sample_feature_table_df = quant_table
 
     # Prepare library search data
