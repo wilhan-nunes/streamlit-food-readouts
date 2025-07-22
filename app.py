@@ -27,7 +27,7 @@ repo_link = "https://github.com/wilhan-nunes/streamlit-food-readouts/"
 # Streamlit app config and title
 st.set_page_config(
     page_title="Dietary Intake Analysis - MetaboApp",
-    page_icon="🧬",
+    page_icon="🍽️",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={"About": (f"**App version**: {app_version} | "
@@ -60,7 +60,7 @@ EXAMPLES_CONFIG = {
     #                    'metadata_file': 'examples/03_example3.csv'},
 }
 
-st.title("Estimation of Dietary intake from untargeted metabolomics data")
+st.title("🥗 Estimation of Dietary intake from untargeted metabolomics data")
 
 # defining query params to populate input fields
 query_params = st.query_params
@@ -119,6 +119,15 @@ with st.sidebar:
     if reset_button:
         st.session_state.clear()
         st.rerun()
+
+    st.subheader("Contributors")
+    st.markdown(
+        """
+    - [Harsha Gouda PhD](https://scholar.google.com/citations?user=mP5z-HsAAAAJ) - UC San Diego
+    - [Wilhan Nunes PhD](https://scholar.google.com/citations?user=4cPVoeIAAAAJ) - UC San Diego
+    - [Mingxun Wang PhD](https://www.cs.ucr.edu/~mingxunw/) - UC Riverside
+    """
+    )
 
 # Process files when task ID and sample feature table are provided
 # Check if any example button was pressed
@@ -338,3 +347,8 @@ else:
     with open('sop_food_readout.md', 'r') as f:
         sop_content = f.read()
     st.markdown(sop_content, unsafe_allow_html=True)
+    st.info("""
+    - This application is part of the GNPS downstream analysis ecosystem known as **MetaboApps**.
+    - If you encounter any issues or have suggestions, please reach out to the app maintainers.
+    - [Checkout other tools](https://wang-bioinformatics-lab.github.io/GNPS2_Documentation/toolindex/#gnps2-web-tools)
+    """)
