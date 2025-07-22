@@ -114,12 +114,12 @@ with st.sidebar:
 
     metadata_file = st.file_uploader('Upload Metadata File', type=["csv", "tsv"])
     if not metadata_file:
-        st.warning("Please upload the metadata file to continue")
+        st.warning("Please upload the metadata file to continue", icon=":material/arrow_warm_up:")
     run_analysis = st.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
-                             use_container_width=True, disabled=not metadata_file)
+                             use_container_width=True, disabled=not metadata_file, icon=":material/play_arrow:")
 
     reset_button = st.button("Reset Session", help="Click to clear the cache.", use_container_width=True,
-                             type="primary")
+                             type="primary", icon=":material/replay:")
     if reset_button:
         st.session_state.clear()
         st.rerun()
