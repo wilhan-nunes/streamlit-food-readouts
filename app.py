@@ -86,13 +86,14 @@ with st.sidebar:
 
     files = os.listdir(BIOMARKERS_FOLDER)
     BIOMARKERS_FILES = [f for f in files if f.endswith(('.csv', '.tsv'))]
+    BIOMARKERS_FILES_DISPLAY = {f.split("_")[-1].replace('.csv', ''): f for f in BIOMARKERS_FILES}
 
     selected_biomarkers_file = st.selectbox(
         "Select Biomarkers File",
-        BIOMARKERS_FILES,
+        BIOMARKERS_FILES_DISPLAY.keys(),
         help="Choose the biomarkers file to use for the analysis."
     )
-    biomarker_filepath = os.path.join(BIOMARKERS_FOLDER, selected_biomarkers_file)
+    biomarker_filepath = os.path.join(BIOMARKERS_FOLDER, BIOMARKERS_FILES_DISPLAY.get(selected_biomarkers_file))
 
     lib_search_task_id = st.text_input(f"{BADGE_LIBRARY_} Library Search Workflow Task ID (GNPS2)",
                                        help="Enter the Task ID from a Library Search Workflow to retrieve the library search results.",
