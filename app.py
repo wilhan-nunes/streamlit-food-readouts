@@ -121,7 +121,7 @@ with st.sidebar:
     if not metadata_file:
         st.warning("Please upload the metadata file to continue", icon=":material/arrow_warm_up:")
     run_analysis = st.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
-                             use_container_width=True, disabled=not metadata_file, icon=":material/play_arrow:")
+                             use_container_width=True, disabled=not(lib_search_task_id and (quant_table_task_id or sample_quant_table_file)), icon=":material/play_arrow:")
 
     reset_button = st.button("Reset Session", help="Click to clear the cache.", use_container_width=True,
                              type="primary", icon=":material/replay:")
