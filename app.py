@@ -174,15 +174,6 @@ if run_analysis or example_run:
                     # Load user-uploaded sample feature table
                     sample_quant_table_df = pd.read_csv(quant_table_contents, sep=None, engine='python')
 
-            # Process data
-            with st.spinner("Processing data..."):
-                result = process_food_biomarkers(biomarker_filepath, lib_search, metadata_file, sample_quant_table_df)
-                st.toast("Data processed successfully!")
-
-            # Load and display the resulting table
-            st.session_state.result_file = result['result_file_path']
-            st.session_state.result_dataframe = result['result_df']
-
         else:
             example_files_dict = EXAMPLES_CONFIG.get(example_run[0], None)
             # Load example data from predefined files for demo mode
@@ -198,12 +189,13 @@ if run_analysis or example_run:
                 metadata_file = example_files_dict.get('metadata_file')
                 st.toast("Example metadata file loaded successfully!", icon="📂")
 
-            with st.spinner("Processing example data..."):
-                result = process_food_biomarkers(biomarker_filepath, lib_search, metadata_file, sample_quant_table_df)
-                st.toast("Example data processed successfully!")
+        with st.spinner("Processing data..."):
+            result = process_food_biomarkers(biomarker_filepath, lib_search, metadata_file, sample_quant_table_df)
+            st.toast("Data processed successfully!")
 
             st.session_state.result_file = result['result_file_path']
             st.session_state.result_dataframe = result['result_df']
+            st.session_state.food_summary = result['food_summary']
 
 
 
@@ -215,7 +207,19 @@ if not st.session_state.get('run_analysis', False):
     st.info(
         ":information_source: Please, provide the inputs, then click Run Analysis.")
 
-if "run_analysis" in st.session_state:
+if not metadata_file and "run_analysis" in st.session_state:
+    st.subheader("Sample Food Annotation Summary")
+    st.info("This is a limited result based on the provided inputs. If you want to run the full analysis, please upload a metadata file with the sample feature table.")
+    st.dataframe(st.session_state.get('food_summary', pd.DataFrame()), use_container_width=True)
+    st.download_button(
+        label="Download Sample Food Summary",
+        data=st.session_state.get('food_summary', pd.DataFrame()).to_csv(sep='\t', index=False),
+        icon=":material/download:",
+        file_name="food_summary.tsv",
+        mime="text/csv"
+    )
+
+elif "run_analysis" in st.session_state and metadata_file:
 
     result_data = st.session_state.get('result_dataframe', None)
 
