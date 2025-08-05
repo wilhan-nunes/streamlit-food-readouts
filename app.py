@@ -142,6 +142,16 @@ with st.sidebar:
 # Check if any example button was pressed
 example_run = [name for name in st.session_state.keys() if name.startswith('load_example_') and st.session_state[name]]
 
+@st.cache_data
+def get_gnps2_df_wrapper(taskid, result_path):
+    return taskresult.get_gnps2_task_resultfile_dataframe(taskid, result_path)
+
+
+@st.cache_data
+def get_gnps2_fbmn_quant_table(taskid):
+    return workflow_fbmn.get_quantification_dataframe(taskid, gnps2=True)
+
+
 if run_analysis or example_run:
     st.session_state['run_analysis'] = True
     try:
@@ -151,12 +161,12 @@ if run_analysis or example_run:
                 # lib_search = fetch_file(lib_search_task_id.strip(), "merged_results.tsv", type="library_search_table",
                 #                         save_to_disk=False,
                 #                         return_content=True)
-                lib_search = taskresult.get_gnps2_task_resultfile_dataframe(lib_search_task_id, "nf_output/merged_results.tsv")
+                lib_search = get_gnps2_df_wrapper(lib_search_task_id, "nf_output/merged_results.tsv")
                 st.empty().success("Library result table downloaded successfully!")
 
             with st.spinner("Downloading FBMN Quant table from task ID..."):
                 if sample_quant_table_file is None:
-                    sample_quant_table_df = workflow_fbmn.get_quantification_dataframe(quant_table_task_id, gnps2=True)
+                    sample_quant_table_df = get_gnps2_fbmn_quant_table(quant_table_task_id)
                     st.success(f"Quant table downloaded successfully from task {quant_table_task_id}!", icon="🔗")
                 else:
                     st.success("Sample Feature Table loaded from uploaded file successfully!", icon="📂")
