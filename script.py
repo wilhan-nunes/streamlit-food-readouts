@@ -1,12 +1,11 @@
 import argparse
 import os
-from io import BytesIO
 
 import pandas as pd
 
 
-def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str | None, quant_table: pd.DataFrame,
-                            output_dir="./output") -> dict:
+def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str | None,
+                            quant_table: pd.DataFrame) -> dict:
     # Get file extensions and set separators
     biomarkers_ext = os.path.splitext(biomarkers_file)[1].lower()
 
@@ -20,7 +19,6 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str
             metadata_sep = None
 
         metadata_df = pd.read_csv(metadata_file, sep=metadata_sep)
-
 
     # Load files
     biomarkers_df = pd.read_csv(biomarkers_file, sep=biomarkers_sep)
@@ -79,22 +77,13 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str
         food_summarized["filename"] = food_summarized["filename"].str.strip()
 
         food_metadata = food_summarized.merge(metadata_df, on="filename", how="left")
-
-        # Save output
-        # os.makedirs(output_dir, exist_ok=True)
-        # result_path = f"{output_dir}/food_metadata.csv"
-        # food_metadata.to_csv(result_path, index=False)
     else:
-        result_path = None
         food_metadata = None
 
     return {
-        'result_file_path': result_path,
         'result_df': food_metadata,
         'food_summary': food_summary_output
     }
-
-
 
 
 if __name__ == '__main__':

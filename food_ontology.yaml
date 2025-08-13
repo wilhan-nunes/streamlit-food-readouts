@@ -1,0 +1,469 @@
+#beverage:
+#  plant:
+#    fruit:
+#      grain/grass:
+#        grain/grass:
+#          grain_fermented:
+#      fleshy fruit:
+#        citrus:
+#          orange:
+#        berry:
+#          coffee:
+#          grape_fermented:
+#    vegetable/herb:
+#      vegetable/herb:
+#        vegetable:
+#          carrot:
+#        sugarcane:
+#          soda:
+#        herb/spice:
+#          mint:
+#        tea/infusion:
+#          tea:
+#  animal:
+#    animal:
+#      dairy:
+#        milk:
+#          milk_cow:
+#          milk_goat:
+#        cream:
+#          cream:
+#  water:
+#    water:
+#      water:
+#        water:
+#          water:
+#food:
+#  plant:
+#    fruit:
+#      legume:
+#        legume:
+#          pea:
+#          peanut:
+#          bean:
+#          lentil:
+#      fleshy fruit:
+#        drupe_aggregate:
+#          raspberry:
+#          apple:
+#        pepo:
+#          melon:
+#          squash:
+#          cucumber:
+#        berry:
+#          pepper:
+#          sumac:
+#          ground cherry:
+#          tomato:
+#          grape:
+#          blueberry:
+#          guava:
+#          eggplant:
+#          cranberry:
+#          banana:
+#          avocado:
+#          persimmon:
+#          betel nut:
+#          coffee:
+#        pome:
+#          apple:
+#          pear:
+#        multifruit:
+#          fig:
+#        citrus:
+#          lemon:
+#          mandarin:
+#          orange:
+#          pomelo:
+#          grapefruit:
+#          kumquat:
+#          lime:
+#        drupe:
+#          apricot:
+#          mango:
+#          cherry:
+#          cocoa seed:
+#          walnut:
+#          olive:
+#        pseudocarp:
+#          strawberry:
+#      grain/grass:
+#        chia:
+#        oat:
+#        poppy seed:
+#        wheat:
+#        corn:
+#        canola:
+#        sesame:
+#        rice:
+#      seed:
+#        sesame seed:
+#        pine nut:
+#    vegetable/herb:
+#      vegetable:
+#        garlic:
+#        kale:
+#        radish greens:
+#        radish:
+#        potato:
+#        onion:
+#        potato leaf:
+#        chard:
+#        kohlrabi:
+#        carrot:
+#        arugula:
+#        spinach:
+#        fennel:
+#        watercress:
+#        lettuce:
+#        celery:
+#        ginger:
+#        beet:
+#        jicama:
+#        betel nut leaf:
+#        sweet potato:
+#      flower:
+#        brussel sprout:
+#        chive blossom:
+#        lavender:
+#        cauliflower:
+#        nasturtium:
+#        dill flower:
+#        marigold:
+#        borage flower:
+#        squash blossom:
+#        broccoli:
+#      herb/spice:
+#        cloves:
+#        cardamom:
+#        basil:
+#        spice:
+#        tarragon:
+#        thyme:
+#        chive stem:
+#        marjoram:
+#        parsley:
+#        rosemary:
+#        mushroom plant:
+#        lemon balm:
+#        mint:
+#        sage:
+#        borage leaf:
+#        cilantro:
+#        curry plant:
+#        dill:
+#        cannabis leaf:
+#        hing powder:
+#        garlic powder:
+#        oregano:
+#        turmeric:
+#        bay leaf:
+#        anise:
+#      tea/infusion:
+#        tea:
+#        infusion:
+#      sugarcane:
+#        sugarcane:
+#    sap:
+#      sap:
+#        sap:
+#          maple syrup:
+#    plant:
+#      grain/grass:
+#        legume:
+#          legume:
+#  algae:
+#    algae:
+#      seaweed:
+#        seaweed:
+#          dulse:
+#  animal:
+#    animal:
+#      honey:
+#        honey:
+#          honey:
+#      egg:
+#        egg_poultry:
+#          egg_chicken:
+#      seafood:
+#        shellfish:
+#          shrimp:
+#          langostino:
+#        fish_freshwater:
+#          trout:
+#          Tilapia:
+#          salmon:
+#      dairy:
+#        cheese:
+#          cheddar cheese:
+#        cream:
+#          cream:
+#        yogurt:
+#          yogurt_cow:
+#        butter:
+#          butter:
+#        milk:
+#          milk_cow:
+#      game meat:
+#        rabbit:
+#          rabbit:
+#      meat:
+#        rat:
+#          rat:
+#        mouse:
+#          mouse:
+#        cow:
+#          veal:
+#          beef:
+#        pig:
+#          pig:
+#      reptile:
+#        lizard:
+#          lizard:
+#      poultry:
+#        poultry:
+#          chicken:
+#    invertebrate:
+#      invertebrate:
+#        worm:
+#          worm:
+#    insect:
+#      insect:
+#        cricket:
+#          cricket:
+#  mineral:
+#    mineral:
+#      mineral:
+#        mineral:
+#          salt:
+#  fungi:
+#    fungi:
+#      fungi:
+#        mushroom:
+#          mushroom:
+
+plant:
+  fruit:
+    legume:
+      legume:
+        pea:
+        peanut:
+        bean:
+        lentil:
+    fleshy fruit:
+      drupe_aggregate:
+        raspberry:
+        apple:
+      pepo:
+        melon:
+        squash:
+        cucumber:
+      berry:
+        pepper:
+        sumac:
+        ground cherry:
+        tomato:
+        grape:
+        blueberry:
+        guava:
+        eggplant:
+        cranberry:
+        banana:
+        avocado:
+        persimmon:
+        betel nut:
+        coffee:
+      pome:
+        apple:
+        pear:
+      multifruit:
+        fig:
+      citrus:
+        lemon:
+        mandarin:
+        orange:
+        pomelo:
+        grapefruit:
+        kumquat:
+        lime:
+      drupe:
+        apricot:
+        mango:
+        cherry:
+        cocoa seed:
+        walnut:
+        olive:
+      pseudocarp:
+        strawberry:
+    grain/grass:
+      grain/grass:
+        chia:
+        oat:
+        poppy seed:
+        wheat:
+        corn:
+        canola:
+        sesame:
+        rice:
+        grain_fermented:
+      legume:
+        legume:
+    seed:
+      seed:
+        sesame seed:
+        pine nut:
+  vegetable/herb:
+    vegetable/herb:
+      vegetable:
+        garlic:
+        kale:
+        radish greens:
+        radish:
+        potato:
+        onion:
+        potato leaf:
+        chard:
+        kohlrabi:
+        carrot:
+        arugula:
+        spinach:
+        fennel:
+        watercress:
+        lettuce:
+        celery:
+        ginger:
+        beet:
+        jicama:
+        betel nut leaf:
+        sweet potato:
+      flower:
+        brussel sprout:
+        chive blossom:
+        lavender:
+        cauliflower:
+        nasturtium:
+        dill flower:
+        marigold:
+        borage flower:
+        squash blossom:
+        broccoli:
+      herb/spice:
+        cloves:
+        cardamom:
+        basil:
+        spice:
+        tarragon:
+        thyme:
+        chive stem:
+        marjoram:
+        parsley:
+        rosemary:
+        mushroom plant:
+        lemon balm:
+        mint:
+        sage:
+        borage leaf:
+        cilantro:
+        curry plant:
+        dill:
+        cannabis leaf:
+        hing powder:
+        garlic powder:
+        oregano:
+        turmeric:
+        bay leaf:
+        anise:
+      tea/infusion:
+        tea:
+        infusion:
+      sugarcane:
+        sugarcane:
+        soda:
+  sap:
+    sap:
+      sap:
+        maple syrup:
+  plant:
+    grain/grass:
+      legume:
+        legume:
+
+animal:
+  animal:
+    honey:
+      honey:
+        honey:
+    egg:
+      egg_poultry:
+        egg_chicken:
+    seafood:
+      shellfish:
+        shrimp:
+        langostino:
+      fish_freshwater:
+        trout:
+        Tilapia:
+        salmon:
+    dairy:
+      cheese:
+        cheddar cheese:
+      cream:
+        cream:
+      yogurt:
+        yogurt_cow:
+      butter:
+        butter:
+      milk:
+        milk_cow:
+        milk_goat:
+    game meat:
+      rabbit:
+        rabbit:
+    meat:
+      rat:
+        rat:
+      mouse:
+        mouse:
+      cow:
+        veal:
+        beef:
+      pig:
+        pig:
+    reptile:
+      lizard:
+        lizard:
+    poultry:
+      poultry:
+        chicken:
+  invertebrate:
+    invertebrate:
+      worm:
+        worm:
+  insect:
+    insect:
+      cricket:
+        cricket:
+
+algae:
+  algae:
+    seaweed:
+      seaweed:
+        dulse:
+
+mineral:
+  mineral:
+    mineral:
+      mineral:
+        salt:
+
+fungi:
+  fungi:
+    fungi:
+      mushroom:
+        mushroom:
+
+water:
+  water:
+    water:
+      water:
+        water:
