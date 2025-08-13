@@ -92,7 +92,6 @@ if __name__ == '__main__':
     parser.add_argument("--lib_search_file", required=True, help="Path to the library search TSV file.")
     parser.add_argument("--metadata_file", required=True, help="Path to the metadata TSV file.")
     parser.add_argument("--sample_quant_table_file", required=True, help="Path to the sample feature table CSV file.")
-    parser.add_argument("--output_dir", default="./output", help="Directory to save the output file.")
 
     args = parser.parse_args()
 
@@ -103,7 +102,6 @@ if __name__ == '__main__':
         lib_search_file=args.lib_search_file,
         metadata_file=args.metadata_file,
         quant_table=sample_feature_table_df,
-        output_dir=args.output_dir
     )
 
     output_file = result['result_file_path']

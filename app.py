@@ -1,8 +1,4 @@
 import os
-import subprocess
-from io import BytesIO
-
-import pandas as pd
 from gnpsdata import workflow_fbmn, taskresult
 import streamlit as st
 from streamlit.components.v1 import html
@@ -11,6 +7,8 @@ from pca_viz import create_pca_visualizations
 from script import process_food_biomarkers
 from box_plot import *
 from volcano_plot import create_interactive_volcano_plot
+from ontology import load_ontology, add_sankey_ontology
+import re
 
 
 def get_git_short_rev():
@@ -243,13 +241,18 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
         mime="text/csv"
     )
 
-    from ontology import load_ontology, add_sankey_ontology
-    import re
     # Load ontology
-
+    st.subheader("🌱 Sample Food Ontology")
     ontology = load_ontology('food_ontology.yaml')
     level = re.search(r'level(\d+)', selected_biomarkers_file).groups(1)[0]
     fig = add_sankey_ontology(ontology, result_data, target_level=int(level), peak_threshold=0)
+    height_by_level = {
+        3: 800,
+        4: 1000,
+        5: 1500
+    }
+    fig_height = st.slider("Plot height", min_value=500, max_value=1500, value=height_by_level.get(int(level)), key='sankey_height')
+    fig.update_layout(height=fig_height)
     st.plotly_chart(fig, use_container_width=True)
 
 
