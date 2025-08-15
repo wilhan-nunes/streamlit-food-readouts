@@ -23,7 +23,7 @@ def get_git_short_rev():
 
 
 # TODO: Bump version
-app_version = "2025-07-21"
+app_version = "2025-08-15"
 git_hash = get_git_short_rev()
 repo_link = "https://github.com/wilhan-nunes/streamlit-food-readouts/"
 
