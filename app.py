@@ -1,8 +1,4 @@
 import os
-import subprocess
-from io import BytesIO
-
-import pandas as pd
 from gnpsdata import workflow_fbmn, taskresult
 import streamlit as st
 from streamlit.components.v1 import html
@@ -11,6 +7,8 @@ from pca_viz import create_pca_visualizations
 from script import process_food_biomarkers
 from box_plot import *
 from volcano_plot import create_interactive_volcano_plot
+from ontology import load_ontology, add_sankey_ontology
+import re
 
 
 def get_git_short_rev():
@@ -86,13 +84,14 @@ with st.sidebar:
 
     files = os.listdir(BIOMARKERS_FOLDER)
     BIOMARKERS_FILES = [f for f in files if f.endswith(('.csv', '.tsv'))]
+    BIOMARKERS_FILES_DISPLAY = {f.split("_")[-1].replace('.csv', ''): f for f in BIOMARKERS_FILES}
 
     selected_biomarkers_file = st.selectbox(
         "Select Biomarkers File",
-        BIOMARKERS_FILES,
+        BIOMARKERS_FILES_DISPLAY.keys(),
         help="Choose the biomarkers file to use for the analysis."
     )
-    biomarker_filepath = os.path.join(BIOMARKERS_FOLDER, selected_biomarkers_file)
+    biomarker_filepath = os.path.join(BIOMARKERS_FOLDER, BIOMARKERS_FILES_DISPLAY.get(selected_biomarkers_file))
 
     lib_search_task_id = st.text_input(f"{BADGE_LIBRARY_} Library Search Workflow Task ID (GNPS2)",
                                        help="Enter the Task ID from a Library Search Workflow to retrieve the library search results.",
@@ -119,13 +118,25 @@ with st.sidebar:
     metadata_file = st.file_uploader('Upload Metadata File', type=["csv", "tsv"])
     if not metadata_file:
         st.warning("Please upload the metadata file to continue", icon=":material/arrow_warm_up:")
+
+    example_run = [name for name in st.session_state.keys() if
+                   name.startswith('load_example_') and st.session_state[name]]
+
+    # Store metadata availability in session state
+    if metadata_file is not None:
+        st.session_state['has_metadata'] = True
+    elif example_run:  # If running example, metadata is available
+        st.session_state['has_metadata'] = True
+
     run_analysis = st.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
-                             use_container_width=True, disabled=not metadata_file, icon=":material/play_arrow:")
+                             use_container_width=True, disabled=not(lib_search_task_id and (quant_table_task_id or sample_quant_table_file)), icon=":material/play_arrow:")
 
     reset_button = st.button("Reset Session", help="Click to clear the cache.", use_container_width=True,
                              type="primary", icon=":material/replay:")
     if reset_button:
         st.session_state.clear()
+        if 'has_metadata' in st.session_state:
+            del st.session_state['has_metadata']
         st.rerun()
 
     st.subheader("Contributors")
@@ -141,58 +152,52 @@ with st.sidebar:
 # Check if any example button was pressed
 example_run = [name for name in st.session_state.keys() if name.startswith('load_example_') and st.session_state[name]]
 
+@st.cache_data
+def get_gnps2_df_wrapper(taskid, result_path):
+    return taskresult.get_gnps2_task_resultfile_dataframe(taskid, result_path)
+
+
+@st.cache_data
+def get_gnps2_fbmn_quant_table(taskid):
+    return workflow_fbmn.get_quantification_dataframe(taskid, gnps2=True)
+
+
 if run_analysis or example_run:
     st.session_state['run_analysis'] = True
     try:
+        placeholder = st.empty()
         if run_analysis:
             # Retrieve lib_search using the task ID
             with st.spinner("Downloading library result table..."):
-                # lib_search = fetch_file(lib_search_task_id.strip(), "merged_results.tsv", type="library_search_table",
-                #                         save_to_disk=False,
-                #                         return_content=True)
-                lib_search = taskresult.get_gnps2_task_resultfile_dataframe(lib_search_task_id, "nf_output/merged_results.tsv")
-                st.empty().success("Library result table downloaded successfully!")
+                lib_search = get_gnps2_df_wrapper(lib_search_task_id, "nf_output/merged_results.tsv")
+                placeholder.success("Library result table downloaded successfully!")
 
             with st.spinner("Downloading FBMN Quant table from task ID..."):
                 if sample_quant_table_file is None:
-                    sample_quant_table_df = workflow_fbmn.get_quantification_dataframe(quant_table_task_id, gnps2=True)
-                    st.success(f"Quant table downloaded successfully from task {quant_table_task_id}!", icon="🔗")
+                    sample_quant_table_df = get_gnps2_fbmn_quant_table(quant_table_task_id)
+                    placeholder.success(f"Quant table downloaded successfully from task {quant_table_task_id}!", icon="🔗")
                 else:
                     st.success("Sample Feature Table loaded from uploaded file successfully!", icon="📂")
                     quant_table_contents = sample_quant_table_file
                     # Load user-uploaded sample feature table
                     sample_quant_table_df = pd.read_csv(quant_table_contents, sep=None, engine='python')
 
-            # Process data
-            with st.spinner("Processing data..."):
-                result = process_food_biomarkers(biomarker_filepath, lib_search, metadata_file, sample_quant_table_df)
-                st.toast("Data processed successfully!")
-
-            # Load and display the resulting table
-            st.session_state.result_file = result['result_file_path']
-            st.session_state.result_dataframe = result['result_df']
-
         else:
             example_files_dict = EXAMPLES_CONFIG.get(example_run[0], None)
             # Load example data from predefined files for demo mode
-            with st.spinner("Loading example library result table..."):
+            with st.spinner("Loading example files..."):
                 lib_search = pd.read_csv(example_files_dict.get('library_results'), sep='\t')
-                st.toast("Example library result table loaded successfully!")
-
-            with st.spinner("Loading example quant table..."):
                 sample_quant_table_df = pd.read_csv(example_files_dict.get('quant_table'))
-                st.toast("Example quant table loaded successfully!", icon="📂")
-
-            with st.spinner("Loading example metadata file..."):
                 metadata_file = example_files_dict.get('metadata_file')
-                st.toast("Example metadata file loaded successfully!", icon="📂")
+                st.toast("Example files loaded successfully!", icon="📂")
 
-            with st.spinner("Processing example data..."):
-                result = process_food_biomarkers(biomarker_filepath, lib_search, metadata_file, sample_quant_table_df)
-                st.toast("Example data processed successfully!")
-
-            st.session_state.result_file = result['result_file_path']
+        with st.spinner("Processing data..."):
+            result = process_food_biomarkers(biomarker_filepath, lib_search, metadata_file, sample_quant_table_df)
+            st.toast("Data processed successfully!", icon="✅")
+            placeholder.empty()
+            # st.session_state.result_file = result['result_file_path']
             st.session_state.result_dataframe = result['result_df']
+            st.session_state.food_summary = result['food_summary']
 
 
 
@@ -201,11 +206,22 @@ if run_analysis or example_run:
         raise
 
 if not st.session_state.get('run_analysis', False):
-    st.info(
-        ":information_source: Please, provide the inputs, then click Run Analysis.")
+    st.info(":information_source: Please, provide the inputs, then click Run Analysis.")
 
-if "run_analysis" in st.session_state:
+elif st.session_state.get('run_analysis', False) and not st.session_state.get('has_metadata', False):
+    st.subheader("Sample Food Annotation Summary")
+    st.info("This is a limited result based on the provided inputs. If you want to run the full analysis, please upload a metadata file with the sample feature table.")
+    st.dataframe(st.session_state.get('food_summary', pd.DataFrame()), use_container_width=True)
+    st.download_button(
+        label="Download Sample Food Summary",
+        data=st.session_state.get('food_summary', pd.DataFrame()).to_csv(sep='\t', index=False),
+        icon=":material/download:",
+        file_name="food_summary.tsv",
+        mime="text/csv"
+    )
 
+elif st.session_state.get('run_analysis', False) and st.session_state.get('has_metadata', False):
+    # Your full results section stays exactly the same
     result_data = st.session_state.get('result_dataframe', None)
 
     quantitative_cols = sorted(result_data.select_dtypes(include=['number']).columns.tolist())
@@ -224,6 +240,21 @@ if "run_analysis" in st.session_state:
         file_name="food_metadata.tsv",
         mime="text/csv"
     )
+
+    # Load ontology
+    st.subheader("🌱 Sample Food Ontology")
+    ontology = load_ontology('food_ontology.yaml')
+    level = re.search(r'level(\d+)', selected_biomarkers_file).groups(1)[0]
+    fig = add_sankey_ontology(ontology, result_data, target_level=int(level), peak_threshold=0)
+    height_by_level = {
+        3: 800,
+        4: 1000,
+        5: 1500
+    }
+    fig_height = st.slider("Plot height", min_value=500, max_value=1500, value=height_by_level.get(int(level)), key='sankey_height')
+    fig.update_layout(height=fig_height)
+    st.plotly_chart(fig, use_container_width=True)
+
 
     # Create box plot
     st.markdown("---")

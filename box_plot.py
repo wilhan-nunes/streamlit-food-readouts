@@ -19,9 +19,9 @@ def create_food_boxplot(df, x_variable:str, y_variables:str,
         Column name for x-axis grouping variable
     y_variables : list,
         List of column names for y-axis measurement variables
-    filter_pattern : str, default r'Vegan|Omni'
+    filter_pattern : str,
         Regex pattern to filter filename column
-    comparison_groups : list, default ['Vegan', 'Omnivore']
+    comparison_groups : list,
         Groups to compare statistically
     title : str, default "Food Readout Analysis"
         Plot title
@@ -79,6 +79,25 @@ def create_food_boxplot(df, x_variable:str, y_variables:str,
         for group_idx, group in enumerate(groups):
             group_data = filtered_df[filtered_df[x_variable] == group]
 
+            # Prepare hover data - include filename if available
+            if 'filename' in group_data.columns:
+                customdata = group_data['filename'].values
+                hovertemplate = (
+                    f"<b>{group}</b><br>" +
+                    f"Variable: {y_var}<br>" +
+                    "Value: %{y}<br>" +
+                    "Filename: %{customdata}<br>" +
+                    "<extra></extra>"
+                )
+            else:
+                customdata = None
+                hovertemplate = (
+                    f"<b>{group}</b><br>" +
+                    f"Variable: {y_var}<br>" +
+                    "Value: %{y}<br>" +
+                    "<extra></extra>"
+                )
+
             fig.add_trace(go.Box(
                 y=group_data[y_var],
                 x=[x_positions[pos_idx]] * len(group_data),
@@ -86,6 +105,8 @@ def create_food_boxplot(df, x_variable:str, y_variables:str,
                 boxpoints='all',
                 jitter=0.3,
                 pointpos=0,
+                customdata=customdata,
+                hovertemplate=hovertemplate,
                 marker=dict(
                     color=colors[group_idx % len(colors)],
                     size=4,
@@ -257,10 +278,7 @@ if __name__ == '__main__':
 
         df = pd.DataFrame(sample_data)
 
-        print("=== Multi-Variable Overlay Box Plot ===\n")
-
         # Example with multiple variables
-        print("Creating overlay plot for multiple variables...")
         fig, svg = create_food_boxplot(
             df,
             x_variable='Classifier',
@@ -268,24 +286,6 @@ if __name__ == '__main__':
             title="Multi-Variable Food Analysis (Overlay)",
             comparison_groups=['Vegan', 'Omnivore']
         )
-
-        print("Plot created successfully!")
-        print("\n=== Usage ===")
-        print("Parameters:")
-        print("- df: Your dataframe")
-        print("- x_variable: Column for grouping (default: 'classifier')")
-        print("- y_variables: List of columns for measurements (default: ['Spinach'])")
-        print("- filter_pattern: Regex for filename filtering (default: r'Vegan|Omni')")
-        print("- comparison_groups: Groups to compare statistically (default: ['Vegan', 'Omnivore'])")
-        print("- title: Plot title")
-
-        print(f"\nExample call:")
-        print("fig, svg = create_food_boxplot_multi(")
-        print("    df,")
-        print("    x_variable='Classifier',")
-        print("    y_variables=['Spinach', 'Tomato', 'Lettuce'],")
-        print("    title='My Analysis'")
-        print(")")
 
         return fig
 

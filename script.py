@@ -1,25 +1,24 @@
 import argparse
 import os
-from io import BytesIO
 
 import pandas as pd
 
 
-def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file, quant_table: pd.DataFrame,
-                            output_dir="./output") -> dict:
+def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str | None,
+                            quant_table: pd.DataFrame) -> dict:
     # Get file extensions and set separators
     biomarkers_ext = os.path.splitext(biomarkers_file)[1].lower()
 
     biomarkers_sep = '\t' if biomarkers_ext in ['.tsv', '.txt'] else ','
 
-    if isinstance(metadata_file, str):
-        metadata_ext = os.path.splitext(metadata_file)[1].lower()
-        metadata_sep = '\t' if metadata_ext in ['.tsv', '.txt'] else ','
-    else:
-        metadata_sep = None
+    if metadata_file:
+        if isinstance(metadata_file, str):
+            metadata_ext = os.path.splitext(metadata_file)[1].lower()
+            metadata_sep = '\t' if metadata_ext in ['.tsv', '.txt'] else ','
+        else:
+            metadata_sep = None
 
-    metadata_df = pd.read_csv(metadata_file, sep=metadata_sep)
-
+        metadata_df = pd.read_csv(metadata_file, sep=metadata_sep)
 
     # Load files
     biomarkers_df = pd.read_csv(biomarkers_file, sep=biomarkers_sep)
@@ -70,23 +69,21 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file, qua
     # Reshape for merging with metadata
     food_summarized = food_summarized.set_index("category").T.reset_index()
     food_summarized = food_summarized.rename(columns={"index": "filename"})
+    food_summary_output = food_summarized.copy()
     food_summarized["filename"] = food_summarized["filename"].str.replace(" Peak area", "", regex=False)
-    metadata_df["filename"] = metadata_df["filename"].str.strip()
-    food_summarized["filename"] = food_summarized["filename"].str.strip()
 
-    food_metadata = food_summarized.merge(metadata_df, on="filename", how="left")
+    if metadata_file:
+        metadata_df["filename"] = metadata_df["filename"].str.strip()
+        food_summarized["filename"] = food_summarized["filename"].str.strip()
 
-    # Save output
-    os.makedirs(output_dir, exist_ok=True)
-    result_path = f"{output_dir}/food_metadata.csv"
-    food_metadata.to_csv(result_path, index=False)
+        food_metadata = food_summarized.merge(metadata_df, on="filename", how="left")
+    else:
+        food_metadata = None
 
     return {
-        'result_file_path': result_path,
         'result_df': food_metadata,
+        'food_summary': food_summary_output
     }
-
-
 
 
 if __name__ == '__main__':
@@ -95,7 +92,6 @@ if __name__ == '__main__':
     parser.add_argument("--lib_search_file", required=True, help="Path to the library search TSV file.")
     parser.add_argument("--metadata_file", required=True, help="Path to the metadata TSV file.")
     parser.add_argument("--sample_quant_table_file", required=True, help="Path to the sample feature table CSV file.")
-    parser.add_argument("--output_dir", default="./output", help="Directory to save the output file.")
 
     args = parser.parse_args()
 
@@ -106,7 +102,6 @@ if __name__ == '__main__':
         lib_search_file=args.lib_search_file,
         metadata_file=args.metadata_file,
         quant_table=sample_feature_table_df,
-        output_dir=args.output_dir
     )
 
     output_file = result['result_file_path']
