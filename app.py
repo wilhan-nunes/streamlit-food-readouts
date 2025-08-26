@@ -6,6 +6,7 @@ from streamlit.components.v1 import html
 from pca_viz import create_pca_visualizations
 from script import process_food_biomarkers
 from box_plot import *
+from utils import add_df_and_filtering
 from volcano_plot import create_interactive_volcano_plot
 from ontology import load_ontology, add_sankey_ontology
 import re
@@ -217,7 +218,8 @@ if not st.session_state.get('run_analysis', False):
 elif st.session_state.get('run_analysis', False) and not st.session_state.get('has_metadata', False):
     st.subheader("Sample Food Annotation Summary")
     st.info("This is a limited result based on the provided inputs. If you want to run the full analysis, please upload a metadata file with the sample feature table.")
-    st.dataframe(st.session_state.get('food_summary', pd.DataFrame()), use_container_width=True)
+    filtered_df = add_df_and_filtering(st.session_state.get('food_summary', pd.DataFrame()), key_prefix='food_summary')
+    st.dataframe(filtered_df, use_container_width=True)
     st.download_button(
         label="Download Sample Food Summary",
         data=st.session_state.get('food_summary', pd.DataFrame()).to_csv(sep='\t', index=False),
@@ -235,7 +237,9 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
     st.session_state['categorical_cols'] = categorical_cols
 
     st.subheader("Processed Food Metadata Table")
-    st.expander("Click to expand").dataframe(result_data)
+    with st.expander("Click to expand", expanded=False):
+        filtered_with_metadata = add_df_and_filtering(result_data, key_prefix='food_metadata')
+        st.dataframe(filtered_with_metadata)
 
     # Download option
     st.download_button(
@@ -263,7 +267,7 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
         fig.update_layout(height=fig_height)
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("No level information found in the selected biomarkers file. Sankey plot will not be shown.")
+        st.info("Sorry! No ontology information for the selected biomarkers file at the moment.")
 
     # Create box plot
     st.markdown("---")
