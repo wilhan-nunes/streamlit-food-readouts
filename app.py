@@ -84,7 +84,13 @@ with st.sidebar:
 
     files = os.listdir(BIOMARKERS_FOLDER)
     BIOMARKERS_FILES = [f for f in files if f.endswith(('.csv', '.tsv'))]
-    BIOMARKERS_FILES_DISPLAY = {f.split("_")[-1].replace('.csv', ''): f for f in BIOMARKERS_FILES}
+    BIOMARKERS_FILES_DISPLAY = {
+        f.split("_")[-1].replace('.csv', ''): f
+        for f in BIOMARKERS_FILES if "level" in f
+    }
+    for f in BIOMARKERS_FILES:
+        if f not in BIOMARKERS_FILES_DISPLAY.values():
+            BIOMARKERS_FILES_DISPLAY[f.split('.')[0]] = f
 
     selected_biomarkers_file = st.selectbox(
         "Select Biomarkers File",
@@ -221,7 +227,6 @@ elif st.session_state.get('run_analysis', False) and not st.session_state.get('h
     )
 
 elif st.session_state.get('run_analysis', False) and st.session_state.get('has_metadata', False):
-    # Your full results section stays exactly the same
     result_data = st.session_state.get('result_dataframe', None)
 
     quantitative_cols = sorted(result_data.select_dtypes(include=['number']).columns.tolist())
@@ -242,19 +247,23 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
     )
 
     # Load ontology
+    #TODO: create new ontology for UK food files
     st.subheader("🌱 Sample Food Ontology")
     ontology = load_ontology('food_ontology.yaml')
-    level = re.search(r'level(\d+)', selected_biomarkers_file).groups(1)[0]
-    fig = add_sankey_ontology(ontology, result_data, target_level=int(level), peak_threshold=0)
-    height_by_level = {
-        3: 800,
-        4: 1000,
-        5: 1500
-    }
-    fig_height = st.slider("Plot height", min_value=500, max_value=1500, value=height_by_level.get(int(level)), key='sankey_height')
-    fig.update_layout(height=fig_height)
-    st.plotly_chart(fig, use_container_width=True)
-
+    level_match = re.search(r'level(\d+)', selected_biomarkers_file)
+    if level_match:
+        level = level_match.groups(1)[0]
+        fig = add_sankey_ontology(ontology, result_data, target_level=int(level), peak_threshold=0)
+        height_by_level = {
+            3: 800,
+            4: 1000,
+            5: 1500
+        }
+        fig_height = st.slider("Plot height", min_value=500, max_value=1500, value=height_by_level.get(int(level)), key='sankey_height')
+        fig.update_layout(height=fig_height)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No level information found in the selected biomarkers file. Sankey plot will not be shown.")
 
     # Create box plot
     st.markdown("---")
