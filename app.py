@@ -275,12 +275,12 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
 
     col_1, col_2 = st.columns(2)
     with col_1:
-        st.selectbox('Select categorical variable for x-axis', categorical_cols, key='x_variable')
+        st.selectbox('Select categorical variable for x-axis', categorical_cols, key='x_variable', index=0)
         if 'x_variable' in st.session_state:
             available = result_data[st.session_state.x_variable].unique().tolist()
             selected_groups = st.multiselect("Select the groups to compare", available, default=available[:2],)
     with col_2:
-        st.multiselect('Select numerical variable for y-axis', quantitative_cols, key='y_variables')
+        st.multiselect('Select numerical variable for y-axis', quantitative_cols, key='y_variables', default=quantitative_cols[0])
 
     box_plot_fig, box_plot_svg = create_food_boxplot(
         result_data,
@@ -305,7 +305,7 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
     # input for PCA
     col1, col2 = st.columns(2)
     with col1:
-        n_components = st.number_input("Number of PCA components", min_value=2, max_value=10, value=4, step=1)
+        n_components = st.number_input("Number of PCA components", min_value=2, max_value=10, value=2, step=1)
         st.session_state.n_components = n_components
     with col2:
         # df is your DataFrame
