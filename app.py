@@ -212,10 +212,7 @@ if run_analysis or example_run:
         st.error(f"An error occurred: {e}")
         raise
 
-if not st.session_state.get('run_analysis', False):
-    st.info(":information_source: Please, provide the inputs, then click Run Analysis.")
-
-elif st.session_state.get('run_analysis', False) and not st.session_state.get('has_metadata', False):
+if st.session_state.get('run_analysis', False) and not st.session_state.get('has_metadata', False):
     st.subheader("Sample Food Annotation Summary")
     st.info("This is a limited result based on the provided inputs. If you want to run the full analysis, please upload a metadata file with the sample feature table.")
     filtered_df = add_df_and_filtering(st.session_state.get('food_summary', pd.DataFrame()), key_prefix='food_summary')
