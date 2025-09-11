@@ -323,7 +323,7 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
             result_data,
             classifier_col=classifier_col if classifier_col else 'Classifier',
             filter_patterns=groups_to_compare,
-            title_prefix="PCA NIST food readout",
+            title_prefix="PCA",
             n_components=n_components,
             metadata_cols=categorical_cols,
         )
@@ -333,9 +333,18 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
         svg_string = results['svg_string']
         pca_info = results['pca_results']
 
+
         col1, col2 = st.columns([2, 1])
         with col1:
             st.pyplot(mpl_figure, use_container_width=True)
+            # add svg download button
+            st.download_button(
+                label="Download PCA Plot SVG",
+                data=svg_string,
+                icon=":material/download:",
+                file_name="pca_plot.svg",
+                mime="image/svg+xml"
+            )
         with col2:
             st.markdown("")  # spacer
             variance_ratios = [pca_info['explained_variance_ratio'][i] for i in range(n_components)]
@@ -392,6 +401,15 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
         )
 
         st.plotly_chart(fig, use_container_width=True)
+        # add volcano plot svg download
+        volcano_svg = fig.to_image(format="svg", width=800, height=600, scale=2)
+        st.download_button(
+            label="Download Volcano Plot SVG",
+            data=volcano_svg,
+            icon=":material/download:",
+            file_name="volcano_plot.svg",
+            mime="image/svg+xml"
+        )
 
 else:
     with open('sop_food_readout.md', 'r') as f:
