@@ -74,6 +74,7 @@ quant_task_id = query_params.get('quant_task_id', '')
 
 # Sidebar inputs
 with st.sidebar:
+    st.image("foodreadout_logo.svg", width=200)
     st.header("Inputs", help='Provide the necessary inputs to run the analysis or select an example below.')
     with st.expander("Example Datasets", expanded=False):
         for name in EXAMPLES_CONFIG:
