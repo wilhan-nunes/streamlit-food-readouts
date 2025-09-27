@@ -12,6 +12,10 @@ from ontology import load_ontology, add_sankey_ontology
 import re
 
 
+@st.cache_data
+def get_gnps2_fbmn_metadata_table(taskid):
+    return workflow_fbmn.get_metadata_dataframe(taskid, gnps2=True)
+
 def get_git_short_rev():
     try:
         with open('.git/logs/HEAD', 'r') as f:
@@ -123,9 +127,14 @@ with st.sidebar:
         else:
             st.warning(f"Please {BADGE_UPLOAD_QUANT_TABLE_} or provide a Task ID  for {BADGE_QUANT_TABLE_}")
 
-    metadata_file = st.file_uploader('Upload Metadata File', type=["csv", "tsv"])
-    if not metadata_file:
-        st.warning("Please upload the metadata file to continue", icon=":material/arrow_warm_up:")
+    metadata_file = get_gnps2_fbmn_metadata_table(quant_table_task_id)
+    if not isinstance(metadata_file, pd.DataFrame):
+        metadata_file = st.file_uploader('Upload Metadata File', type=["csv", "tsv"])
+        print(metadata_file)
+        if not metadata_file:
+            st.warning("Please upload the metadata file to continue", icon=":material/arrow_warm_up:")
+    else:
+        st.success(f"Metadata available from task ID.", icon=":material/check_circle:")
 
     example_run = [name for name in st.session_state.keys() if
                    name.startswith('load_example_') and st.session_state[name]]
@@ -196,7 +205,7 @@ if run_analysis or example_run:
             with st.spinner("Loading example files..."):
                 lib_search = pd.read_csv(example_files_dict.get('library_results'), sep='\t')
                 sample_quant_table_df = pd.read_csv(example_files_dict.get('quant_table'))
-                metadata_file = example_files_dict.get('metadata_file')
+                metadata_file = pd.read_csv(example_files_dict.get('metadata_file'))
                 st.toast("Example files loaded successfully!", icon="📂")
 
         with st.spinner("Processing data..."):
@@ -256,14 +265,23 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
     if level_match:
         level = level_match.groups(1)[0]
         fig = add_sankey_ontology(ontology, result_data, target_level=int(level), peak_threshold=0)
-        height_by_level = {
-            3: 800,
-            4: 1000,
-            5: 1500
-        }
-        fig_height = st.slider("Plot height", min_value=500, max_value=1500, value=height_by_level.get(int(level)), key='sankey_height')
-        fig.update_layout(height=fig_height)
-        st.plotly_chart(fig, use_container_width=True)
+
+        if fig is not None:
+            height_by_level = {
+                3: 800,
+                4: 1000,
+                5: 1500
+            }
+            fig_height = st.slider("Plot height", min_value=500, max_value=1500, value=height_by_level.get(int(level)), key='sankey_height')
+            fig.update_layout(height=fig_height)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("No ontology flows found for the current data. This could be due to:")
+            st.markdown("""
+            - No matching food biomarkers in the dataset
+            - All biomarker values are below the threshold
+            - The selected biomarkers file doesn't match the ontology structure
+            """)
     else:
         st.info("Sorry! No ontology information for the selected biomarkers file at the moment.")
 

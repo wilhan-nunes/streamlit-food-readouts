@@ -11,14 +11,13 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str
 
     biomarkers_sep = '\t' if biomarkers_ext in ['.tsv', '.txt'] else ','
 
-    if metadata_file:
-        if isinstance(metadata_file, str):
-            metadata_ext = os.path.splitext(metadata_file)[1].lower()
-            metadata_sep = '\t' if metadata_ext in ['.tsv', '.txt'] else ','
-        else:
-            metadata_sep = None
-
-        metadata_df = pd.read_csv(metadata_file, sep=metadata_sep)
+    # if isinstance(metadata_file, str):
+    #     metadata_ext = os.path.splitext(metadata_file)[1].lower()
+    #     metadata_sep = '\t' if metadata_ext in ['.tsv', '.txt'] else ','
+    # else:
+    #     metadata_sep = None
+    #
+    # metadata_df = pd.read_csv(metadata_file, sep=metadata_sep)
 
     # Load files
     biomarkers_df = pd.read_csv(biomarkers_file, sep=biomarkers_sep)
@@ -27,7 +26,14 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str
     sample_feature_table_df = quant_table
 
     # Prepare library search data
-    lib_search_df = lib_search_df.rename(columns={"Protein": "Node"})[["#Scan#", "Node"]]
+    if "CompoundName" in lib_search_df.columns and lib_search_df["CompoundName"].astype(str).str.isdigit().all():
+        lib_search_df = lib_search_df.rename(columns={
+            "CompoundName": "Node",
+        })[["#Scan#", "Node"]]
+    else:
+        lib_search_df = lib_search_df.rename(columns={
+            "Protein": "Node"
+        })[["#Scan#", "Node"]]
     lib_search_df = lib_search_df[["#Scan#", "Node"]].astype(str)
     lib_search_df['Node'] = lib_search_df['Node'].apply(lambda x: x.replace(':', ''))
     biomarkers_df = biomarkers_df.rename(columns={"Feature": "Node"})
@@ -72,7 +78,8 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str
     food_summary_output = food_summarized.copy()
     food_summarized["filename"] = food_summarized["filename"].str.replace(" Peak area", "", regex=False)
 
-    if metadata_file:
+    if isinstance(metadata_file, pd.DataFrame):
+        metadata_df = metadata_file
         metadata_df["filename"] = metadata_df["filename"].str.strip()
         food_summarized["filename"] = food_summarized["filename"].str.strip()
 
@@ -95,13 +102,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    sample_feature_table_df = pd.read_csv(args.sample_feature_table_file, sep=None, engine='python')
+    sample_quant_table_df = pd.read_csv(args.sample_quant_table_file, sep=None, engine='python')
+    lib_search_df = pd.read_csv(args.lib_search_file, sep='\t')
 
     result = process_food_biomarkers(
         biomarkers_file=args.biomarkers_file,
-        lib_search_file=args.lib_search_file,
+        lib_search_file=lib_search_df,
         metadata_file=args.metadata_file,
-        quant_table=sample_feature_table_df,
+        quant_table=sample_quant_table_df,
     )
 
     output_file = result['result_file_path']
