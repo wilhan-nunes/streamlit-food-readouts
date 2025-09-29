@@ -4,25 +4,22 @@ import os
 import pandas as pd
 
 
-def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str | None,
+def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str | pd.DataFrame | None,
                             quant_table: pd.DataFrame) -> dict:
     # Get file extensions and set separators
     biomarkers_ext = os.path.splitext(biomarkers_file)[1].lower()
-
     biomarkers_sep = '\t' if biomarkers_ext in ['.tsv', '.txt'] else ','
 
-    # if isinstance(metadata_file, str):
-    #     metadata_ext = os.path.splitext(metadata_file)[1].lower()
-    #     metadata_sep = '\t' if metadata_ext in ['.tsv', '.txt'] else ','
-    # else:
-    #     metadata_sep = None
-    #
-    # metadata_df = pd.read_csv(metadata_file, sep=metadata_sep)
-
-    # Load files
+    # Load biomarkers file
     biomarkers_df = pd.read_csv(biomarkers_file, sep=biomarkers_sep)
-    # lib_search_df = pd.read_csv(BytesIO(lib_search_file), sep='\t')
-    lib_search_df = lib_search_file
+    
+    # Handle lib_search_file (can be DataFrame or file path)
+    if isinstance(lib_search_file, pd.DataFrame):
+        lib_search_df = lib_search_file
+    else:
+        lib_search_df = pd.read_csv(lib_search_file, sep='\t')
+    
+    # Use the provided quant_table DataFrame directly
     sample_feature_table_df = quant_table
 
     # Prepare library search data
@@ -78,13 +75,23 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str
     food_summary_output = food_summarized.copy()
     food_summarized["filename"] = food_summarized["filename"].str.replace(" Peak area", "", regex=False)
 
+    # Handle metadata file processing
     if isinstance(metadata_file, pd.DataFrame):
+        # Metadata is already a DataFrame
         metadata_df = metadata_file
         metadata_df["filename"] = metadata_df["filename"].str.strip()
         food_summarized["filename"] = food_summarized["filename"].str.strip()
-
+        food_metadata = food_summarized.merge(metadata_df, on="filename", how="left")
+    elif isinstance(metadata_file, str) and metadata_file:
+        # Metadata is a file path
+        metadata_ext = os.path.splitext(metadata_file)[1].lower()
+        metadata_sep = '\t' if metadata_ext in ['.tsv', '.txt'] else ','
+        metadata_df = pd.read_csv(metadata_file, sep=metadata_sep)
+        metadata_df["filename"] = metadata_df["filename"].str.strip()
+        food_summarized["filename"] = food_summarized["filename"].str.strip()
         food_metadata = food_summarized.merge(metadata_df, on="filename", how="left")
     else:
+        # No metadata provided
         food_metadata = None
 
     return {
@@ -94,37 +101,57 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Process food biomarkers and generate metadata.")
-    parser.add_argument("--biomarkers_file", required=True, help="Path to the biomarkers CSV file.")
-    parser.add_argument("--lib_search_file", required=True, help="Path to the library search TSV file.")
-    parser.add_argument("--metadata_file", required=True, help="Path to the metadata TSV file.")
-    parser.add_argument("--sample_quant_table_file", required=True, help="Path to the sample feature table CSV file.")
+    # --- Option 1: Run with command-line arguments ---
+    # Uncomment below to use argparse for file-based inputs
+    # parser = argparse.ArgumentParser(description="Process food biomarkers and generate metadata.")
+    # parser.add_argument("--biomarkers_file", required=True, help="Path to the biomarkers CSV file.")
+    # parser.add_argument("--lib_search_file", required=True, help="Path to the library search TSV file.")
+    # parser.add_argument("--metadata_file", required=True, help="Path to the metadata TSV file.")
+    # parser.add_argument("--sample_quant_table_file", required=True, help="Path to the sample feature table CSV file.")
+    # args = parser.parse_args()
+    # sample_quant_table_df = pd.read_csv(args.sample_quant_table_file, sep=None, engine='python')
+    # lib_search_df = pd.read_csv(args.lib_search_file, sep='\t')
+    # result = process_food_biomarkers(
+    #     biomarkers_file=args.biomarkers_file,
+    #     lib_search_file=lib_search_df,
+    #     metadata_file=args.metadata_file,
+    #     quant_table=sample_quant_table_df,
+    # )
 
-    args = parser.parse_args()
+    # --- Option 2: Run with hardcoded variables (manual testing) ---
+    # You can use either file paths or DataFrames for the inputs as supported by the function
+    from gnpsdata import taskresult, workflow_fbmn
 
-    sample_quant_table_df = pd.read_csv(args.sample_quant_table_file, sep=None, engine='python')
-    lib_search_df = pd.read_csv(args.lib_search_file, sep='\t')
+    def get_gnps2_df_wrapper(taskid, result_path):
+        return taskresult.get_gnps2_task_resultfile_dataframe(taskid, result_path)
+
+    def get_gnps2_fbmn_quant_table(taskid):
+        return workflow_fbmn.get_quantification_dataframe(taskid, gnps2=True)
+
+    # Example: using DataFrame for lib_search_file, file paths for others
+    lib_search_df = get_gnps2_df_wrapper('a496eab9f98b41f7a571cf88b3d14977', "nf_output/merged_results.tsv")
+    biomarker_file = './data/biomarker_tables/500_foods_level5.csv'
+    metadata_file = '/path/to/file/metadata.tsv'
+    quant_file = '/path/to/file/quantd_table.csv'
+    sample_quant_table_df = pd.read_csv(quant_file, sep=None, engine='python')
 
     result = process_food_biomarkers(
-        biomarkers_file=args.biomarkers_file,
-        lib_search_file=lib_search_df,
-        metadata_file=args.metadata_file,
-        quant_table=sample_quant_table_df,
+        biomarkers_file=biomarker_file,
+        lib_search_file=lib_search_df,  # DataFrame
+        metadata_file=metadata_file,    # file path
+        quant_table=sample_quant_table_df  # DataFrame
     )
 
-    output_file = result['result_file_path']
-    print(f"Processed food metadata saved to: {output_file}")
+    # Example: using only file paths (all inputs as strings)
+    # result = process_food_biomarkers(
+    #     biomarkers_file=biomarker_file,
+    #     lib_search_file='nf_output/merged_results.tsv',
+    #     metadata_file=metadata_file,
+    #     quant_table=sample_quant_table_df
+    # )
 
-# running command example:
-# python script.py --biomarkers_file data/Biomarkers_level5_FC5_VIP6.csv --lib_search_file input_test_files/merged_results.tsv --metadata_file data/gnps_metadata_ming.tsv --sample_quant_table_file input_test_files/MSV82493_iimn_gnps_quant.csv
-
-
-# Another example coming from task IDs:
-# --biomarkers_file
-# data/Biomarkers_level5_FC5_VIP6.csv
-# --lib_search_file
-# output/merged_results.tsv
-# --metadata_file
-# data/gnps_metadata_ming.tsv
-# --sample_quant_table_file
-# output/tall_raw_data.tsv
+    # Print summary for verification
+    print("Food metadata result (head):")
+    print(result['result_df'].head() if result['result_df'] is not None else "No metadata result.")
+    print("\nFood summary (head):")
+    print(result['food_summary'].head())
