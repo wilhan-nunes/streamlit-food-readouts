@@ -12,6 +12,10 @@ from ontology import load_ontology, add_sankey_ontology
 import re
 
 
+@st.cache_data
+def get_gnps2_fbmn_metadata_table(taskid):
+    return workflow_fbmn.get_metadata_dataframe(taskid, gnps2=True)
+
 def get_git_short_rev():
     try:
         with open('.git/logs/HEAD', 'r') as f:
@@ -123,18 +127,31 @@ with st.sidebar:
         else:
             st.warning(f"Please {BADGE_UPLOAD_QUANT_TABLE_} or provide a Task ID  for {BADGE_QUANT_TABLE_}")
 
-    metadata_file = st.file_uploader('Upload Metadata File', type=["csv", "tsv"])
-    if not metadata_file:
-        st.warning("Please upload the metadata file to continue", icon=":material/arrow_warm_up:")
+    metadata_file = get_gnps2_fbmn_metadata_table(quant_table_task_id)
+    if not isinstance(metadata_file, pd.DataFrame):
+        uploaded_metadata_file = st.file_uploader('Upload Metadata File', type=["csv", "tsv"])
+        if uploaded_metadata_file:
+            # Convert uploaded file to DataFrame
+            file_ext = uploaded_metadata_file.name.split('.')[-1].lower()
+            separator = '\t' if file_ext in ['tsv', 'txt'] else ','
+            metadata_file = pd.read_csv(uploaded_metadata_file, sep=separator)
+            st.success("Metadata file uploaded and processed successfully!", icon=":material/check_circle:")
+        else:
+            metadata_file = None
+            st.warning("Please upload the metadata file to continue", icon=":material/arrow_warm_up:")
+    else:
+        st.success(f"Metadata available from task ID.", icon=":material/check_circle:")
 
     example_run = [name for name in st.session_state.keys() if
                    name.startswith('load_example_') and st.session_state[name]]
 
     # Store metadata availability in session state
-    if metadata_file is not None:
+    if isinstance(metadata_file, pd.DataFrame) or metadata_file is not None:
         st.session_state['has_metadata'] = True
     elif example_run:  # If running example, metadata is available
         st.session_state['has_metadata'] = True
+    else:
+        st.session_state['has_metadata'] = False
 
     run_analysis = st.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
                              use_container_width=True, disabled=not(lib_search_task_id and (quant_table_task_id or sample_quant_table_file)), icon=":material/play_arrow:")
@@ -185,10 +202,11 @@ if run_analysis or example_run:
                     sample_quant_table_df = get_gnps2_fbmn_quant_table(quant_table_task_id)
                     placeholder.success(f"Quant table downloaded successfully from task {quant_table_task_id}!", icon="🔗")
                 else:
+                    # Convert uploaded file to DataFrame
+                    file_ext = sample_quant_table_file.name.split('.')[-1].lower()
+                    separator = '\t' if file_ext in ['tsv', 'txt'] else ','
+                    sample_quant_table_df = pd.read_csv(sample_quant_table_file, sep=separator)
                     st.success("Sample Feature Table loaded from uploaded file successfully!", icon="📂")
-                    quant_table_contents = sample_quant_table_file
-                    # Load user-uploaded sample feature table
-                    sample_quant_table_df = pd.read_csv(quant_table_contents, sep=None, engine='python')
 
         else:
             example_files_dict = EXAMPLES_CONFIG.get(example_run[0], None)
@@ -196,7 +214,7 @@ if run_analysis or example_run:
             with st.spinner("Loading example files..."):
                 lib_search = pd.read_csv(example_files_dict.get('library_results'), sep='\t')
                 sample_quant_table_df = pd.read_csv(example_files_dict.get('quant_table'))
-                metadata_file = example_files_dict.get('metadata_file')
+                metadata_file = pd.read_csv(example_files_dict.get('metadata_file'))
                 st.toast("Example files loaded successfully!", icon="📂")
 
         with st.spinner("Processing data..."):
@@ -256,14 +274,23 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
     if level_match:
         level = level_match.groups(1)[0]
         fig = add_sankey_ontology(ontology, result_data, target_level=int(level), peak_threshold=0)
-        height_by_level = {
-            3: 800,
-            4: 1000,
-            5: 1500
-        }
-        fig_height = st.slider("Plot height", min_value=500, max_value=1500, value=height_by_level.get(int(level)), key='sankey_height')
-        fig.update_layout(height=fig_height)
-        st.plotly_chart(fig, use_container_width=True)
+
+        if fig is not None:
+            height_by_level = {
+                3: 800,
+                4: 1000,
+                5: 1500
+            }
+            fig_height = st.slider("Plot height", min_value=500, max_value=1500, value=height_by_level.get(int(level)), key='sankey_height')
+            fig.update_layout(height=fig_height)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("No ontology flows found for the current data. This could be due to:")
+            st.markdown("""
+            - No matching food biomarkers in the dataset
+            - All biomarker values are below the threshold
+            - The selected biomarkers file doesn't match the ontology structure
+            """)
     else:
         st.info("Sorry! No ontology information for the selected biomarkers file at the moment.")
 
