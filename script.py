@@ -81,7 +81,7 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str
         metadata_df = metadata_file
         metadata_df["filename"] = metadata_df["filename"].str.strip()
         food_summarized["filename"] = food_summarized["filename"].str.strip()
-        food_metadata = food_summarized.merge(metadata_df, on="filename", how="left")
+        food_metadata = food_summarized.merge(metadata_df, on="filename", how="left").fillna('NA')
     elif isinstance(metadata_file, str) and metadata_file:
         # Metadata is a file path
         metadata_ext = os.path.splitext(metadata_file)[1].lower()
@@ -89,7 +89,7 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str
         metadata_df = pd.read_csv(metadata_file, sep=metadata_sep)
         metadata_df["filename"] = metadata_df["filename"].str.strip()
         food_summarized["filename"] = food_summarized["filename"].str.strip()
-        food_metadata = food_summarized.merge(metadata_df, on="filename", how="left")
+        food_metadata = food_summarized.merge(metadata_df, on="filename", how="left").fillna('NA')
     else:
         # No metadata provided
         food_metadata = None
