@@ -1,5 +1,5 @@
 requests
-streamlit
+streamlit==1.44.1
 pandas
 numpy
 plotly

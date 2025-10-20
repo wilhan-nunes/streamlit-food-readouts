@@ -156,9 +156,9 @@ with st.sidebar:
             st.session_state['has_metadata'] = False
 
     run_analysis = st.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
-                             width="content", disabled=not(lib_search_task_id and (quant_table_task_id or sample_quant_table_file)), icon=":material/play_arrow:")
+                             use_container_width=True, disabled=not(lib_search_task_id and (quant_table_task_id or sample_quant_table_file)), icon=":material/play_arrow:")
 
-    reset_button = st.button("Reset Session", help="Click to clear the cache.", width="content",
+    reset_button = st.button("Reset Session", help="Click to clear the cache.", use_container_width=True,
                              type="primary", icon=":material/replay:")
     if reset_button:
         st.session_state.clear()
@@ -241,7 +241,7 @@ if st.session_state.get('run_analysis', False) and not st.session_state.get('has
     st.subheader("Sample Food Annotation Summary")
     st.info("This is a limited result based on the provided inputs. If you want to run the full analysis, please upload a metadata file with the sample feature table.")
     filtered_df = add_df_and_filtering(st.session_state.get('food_summary', pd.DataFrame()), key_prefix='food_summary')
-    st.dataframe(filtered_df, width="content")
+    st.dataframe(filtered_df, use_container_width=True)
     st.download_button(
         label="Download Sample Food Summary",
         data=st.session_state.get('food_summary', pd.DataFrame()).to_csv(sep='\t', index=False),
