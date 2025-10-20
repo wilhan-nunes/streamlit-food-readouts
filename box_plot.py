@@ -167,7 +167,7 @@ def create_food_boxplot(df, x_variable:str, y_variables:str,
         )
     )
 
-    return fig, fig.to_image(format="svg", engine="kaleido").decode('utf-8')
+    return fig
 
 
 def _add_statistical_annotation_overlay(fig, filtered_df, x_variable, y_variable,

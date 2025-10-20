@@ -145,23 +145,23 @@ with st.sidebar:
     example_run = [name for name in st.session_state.keys() if
                    name.startswith('load_example_') and st.session_state[name]]
 
-    # Store metadata availability in session state
-    if isinstance(metadata_file, pd.DataFrame) or metadata_file is not None:
-        st.session_state['has_metadata'] = True
-    elif example_run:  # If running example, metadata is available
-        st.session_state['has_metadata'] = True
-    else:
-        st.session_state['has_metadata'] = False
+    # Store metadata availability in session state - only update if analysis is being run
+    # This prevents resetting has_metadata on widget interactions
+    if not st.session_state.get('run_analysis', False):
+        if isinstance(metadata_file, pd.DataFrame) or metadata_file is not None:
+            st.session_state['has_metadata'] = True
+        elif example_run:  # If running example, metadata is available
+            st.session_state['has_metadata'] = True
+        else:
+            st.session_state['has_metadata'] = False
 
     run_analysis = st.button("Run Analysis", help="Click to start the analysis with the provided inputs.",
-                             use_container_width=True, disabled=not(lib_search_task_id and (quant_table_task_id or sample_quant_table_file)), icon=":material/play_arrow:")
+                             width="content", disabled=not(lib_search_task_id and (quant_table_task_id or sample_quant_table_file)), icon=":material/play_arrow:")
 
-    reset_button = st.button("Reset Session", help="Click to clear the cache.", use_container_width=True,
+    reset_button = st.button("Reset Session", help="Click to clear the cache.", width="content",
                              type="primary", icon=":material/replay:")
     if reset_button:
         st.session_state.clear()
-        if 'has_metadata' in st.session_state:
-            del st.session_state['has_metadata']
         st.rerun()
 
     st.subheader("Contributors")
@@ -224,6 +224,12 @@ if run_analysis or example_run:
             # st.session_state.result_file = result['result_file_path']
             st.session_state.result_dataframe = result['result_df']
             st.session_state.food_summary = result['food_summary']
+            
+            # Update has_metadata flag based on whether metadata was used
+            if isinstance(metadata_file, pd.DataFrame):
+                st.session_state['has_metadata'] = True
+            else:
+                st.session_state['has_metadata'] = False
 
 
 
@@ -235,7 +241,7 @@ if st.session_state.get('run_analysis', False) and not st.session_state.get('has
     st.subheader("Sample Food Annotation Summary")
     st.info("This is a limited result based on the provided inputs. If you want to run the full analysis, please upload a metadata file with the sample feature table.")
     filtered_df = add_df_and_filtering(st.session_state.get('food_summary', pd.DataFrame()), key_prefix='food_summary')
-    st.dataframe(filtered_df, use_container_width=True)
+    st.dataframe(filtered_df, width="content")
     st.download_button(
         label="Download Sample Food Summary",
         data=st.session_state.get('food_summary', pd.DataFrame()).to_csv(sep='\t', index=False),
@@ -296,145 +302,173 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
 
     # Create box plot
     st.markdown("---")
-    st.subheader("Box Plot of Food Biomarkers")
+    @st.fragment
+    def generate_box_plot_section():
+        st.subheader("Box Plot of Food Biomarkers")
 
-    col_1, col_2 = st.columns(2)
-    with col_1:
-        st.selectbox('Select categorical variable for x-axis', categorical_cols, key='x_variable', index=0)
-        if 'x_variable' in st.session_state:
-            available = result_data[st.session_state.x_variable].unique().tolist()
-            selected_groups = st.multiselect("Select the groups to compare", available, default=available[:2],)
-    with col_2:
-        st.multiselect('Select numerical variable for y-axis', quantitative_cols, key='y_variables', default=quantitative_cols[0])
+        col_1, col_2 = st.columns(2)
+        with col_1:
+            st.selectbox('Select categorical variable for x-axis', categorical_cols, key='x_variable', index=0)
+            if 'x_variable' in st.session_state:
+                available = result_data[st.session_state.x_variable].unique().tolist()
+                selected_groups = st.multiselect("Select the groups to compare", available, default=available[:2],)
+        with col_2:
+            st.multiselect('Select numerical variable for y-axis', quantitative_cols, key='y_variables', default=quantitative_cols[0])
+        with st.spinner("Generating Box Plot..."):
+            box_plot_fig = create_food_boxplot(
+                result_data,
+                x_variable=st.session_state.get('x_variable', 'Classifier'),
+                y_variables=st.session_state.get('y_variables', ['Spinach']),
+                filter_pattern="|".join(selected_groups),
+                comparison_groups=selected_groups,
+                title=f"{",".join(st.session_state.y_variables)} Readout Analysis",
+            )
+            st.plotly_chart(box_plot_fig, use_container_width=True)
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Generate plot svg download", icon=":material/manufacturing:", key='generate_boxplot_svg'):
+                    with col2:
+                        with st.spinner("Preparing Box Plot SVG..."):
+                            st.download_button(
+                                label="Download Box Plot SVG",
+                                data=box_plot_fig.to_image(format="svg", engine="kaleido").decode('utf-8'),
+                                icon=":material/download:",
+                                file_name="food_box_plot.svg",
+                                mime="image/svg+xml",
+                                type="primary"
+                            )
 
-    box_plot_fig, box_plot_svg = create_food_boxplot(
-        result_data,
-        x_variable=st.session_state.get('x_variable', 'Classifier'),
-        y_variables=st.session_state.get('y_variables', ['Spinach']),
-        filter_pattern="|".join(selected_groups),
-        comparison_groups=selected_groups,
-        title=f"{",".join(st.session_state.y_variables)} Readout Analysis",
-    )
-    st.plotly_chart(box_plot_fig, use_container_width=True)
-    st.download_button(
-        label="Download Box Plot SVG",
-        data=box_plot_svg,
-        icon=":material/download:",
-        file_name="food_box_plot.svg",
-        mime="image/svg+xml"
-    )
+    with st.spinner("Generating Box Plot Section..."):
+        generate_box_plot_section()
 
     # Create PCA visualizations
     st.markdown("---")
-    st.subheader("PCA Visualizations")
-    # input for PCA
-    col1, col2 = st.columns(2)
-    with col1:
-        n_components = st.number_input("Number of PCA components", min_value=2, max_value=10, value=2, step=1)
-        st.session_state.n_components = n_components
-    with col2:
-        # df is your DataFrame
-        classifier_col = st.selectbox('Select Classifier Column', [None] + categorical_cols, key='classifier_col')
-        groups_to_compare = st.multiselect(
-            'Select Groups to Compare',
-            result_data[classifier_col].unique().tolist() if classifier_col else [],
-            default=result_data[classifier_col].unique().tolist()[:2] if classifier_col else [],
-            key='groups_to_compare'
-        )
-    if classifier_col is None:
-        st.info("Select a Classifier Column above")
-    else:
-        results = create_pca_visualizations(
-            result_data,
-            classifier_col=classifier_col if classifier_col else 'Classifier',
-            filter_patterns=groups_to_compare,
-            title_prefix="PCA",
-            n_components=n_components,
-            metadata_cols=categorical_cols,
-        )
-
-        plotly_figure = results['plotly_fig']
-        mpl_figure = results['mpl_fig']
-        svg_string = results['svg_string']
-        pca_info = results['pca_results']
-
-
-        col1, col2 = st.columns([2, 1])
+    @st.fragment
+    def generate_pca_section():
+        st.subheader("PCA Visualizations")
+        # input for PCA
+        col1, col2 = st.columns(2)
         with col1:
-            st.pyplot(mpl_figure, use_container_width=True)
-            # add svg download button
-            st.download_button(
-                label="Download PCA Plot SVG",
-                data=svg_string,
-                icon=":material/download:",
-                file_name="pca_plot.svg",
-                mime="image/svg+xml"
-            )
+            n_components = st.number_input("Number of PCA components", min_value=2, max_value=10, value=2, step=1)
+            st.session_state.n_components = n_components
         with col2:
-            st.markdown("")  # spacer
-            variance_ratios = [pca_info['explained_variance_ratio'][i] for i in range(n_components)]
-            st.markdown(
-                f"Explained Variance Ratios: <br>"
-                f"{', '.join([f'PC{i + 1}={variance_ratios[i]:.2f}%' for i in range(n_components)])}",
-                unsafe_allow_html=True
+            # df is your DataFrame
+            classifier_col = st.selectbox('Select Classifier Column', [None] + categorical_cols, key='classifier_col')
+            groups_to_compare = st.multiselect(
+                'Select Groups to Compare',
+                result_data[classifier_col].unique().tolist() if classifier_col else [],
+                default=result_data[classifier_col].unique().tolist()[:2] if classifier_col else [],
+                key='groups_to_compare'
             )
-            st.markdown(
-                f"Explained variance: <br>"
-                f"PC1={pca_info['explained_variance_ratio'][0]:.2f}%, PC2={pca_info['explained_variance_ratio'][1]:.2f}%<br>",
-                unsafe_allow_html=True)
-            st.markdown(f"Number of features used: {pca_info['n_features']}")
-            st.expander('Feature Names', expanded=False).markdown(
-                f"{', '.join(pca_info['feature_names'])}...", unsafe_allow_html=False)
-        # st.image(svg_string)
+        if classifier_col is None:
+            st.info("Select a Classifier Column above", icon=":material/info:")
+        else:
+            results = create_pca_visualizations(
+                result_data,
+                classifier_col=classifier_col if classifier_col else 'Classifier',
+                filter_patterns=groups_to_compare,
+                title_prefix="PCA",
+                n_components=n_components,
+                metadata_cols=categorical_cols,
+            )
+
+            plotly_figure = results['plotly_fig']
+            mpl_figure = results['mpl_fig']
+            svg_string = results['svg_string']
+            pca_info = results['pca_results']
+
+
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.pyplot(mpl_figure, use_container_width=True)
+                # add svg download button
+                st.download_button(
+                    label="Download PCA Plot SVG",
+                    data=svg_string,
+                    icon=":material/download:",
+                    file_name="pca_plot.svg",
+                    mime="image/svg+xml"
+                )
+            with col2:
+                st.markdown("")  # spacer
+                variance_ratios = [pca_info['explained_variance_ratio'][i] for i in range(n_components)]
+                st.markdown(
+                    f"Explained Variance Ratios: <br>"
+                    f"{', '.join([f'PC{i + 1}={variance_ratios[i]:.2f}%' for i in range(n_components)])}",
+                    unsafe_allow_html=True
+                )
+                st.markdown(
+                    f"Explained variance: <br>"
+                    f"PC1={pca_info['explained_variance_ratio'][0]:.2f}%, PC2={pca_info['explained_variance_ratio'][1]:.2f}%<br>",
+                    unsafe_allow_html=True)
+                st.markdown(f"Number of features used: {pca_info['n_features']}")
+                st.expander('Feature Names', expanded=False).markdown(
+                    f"{', '.join(pca_info['feature_names'])}...", unsafe_allow_html=False)
+            # st.image(svg_string)
+    with st.spinner("Generating PCA Section..."):
+        generate_pca_section()
 
     ## Volcano plot
     st.markdown("---")
-    st.subheader("Volcano Plot")
+    @st.fragment
+    def generate_volcano_plot_section():
+        st.subheader("Volcano Plot")
 
-    col1, col2, col3 = st.columns(3)
+        col1, col2, col3 = st.columns(3)
 
-    with (col1):
-        group_col = st.selectbox('Group Column', [None] + categorical_cols, key='group_col')
-        if group_col:
-            subcol1, subcol2 = st.columns(2)
-            available_groups = result_data[group_col].unique().tolist()
-            with subcol1:
-                group1 = st.selectbox('Group 1', available_groups, index=0)
-            with subcol2:
-                group2 = st.selectbox('Group 2', available_groups, index=1)
+        with (col1):
+            group_col = st.selectbox('Group Column', [None] + categorical_cols, key='group_col')
+            if group_col:
+                subcol1, subcol2 = st.columns(2)
+                available_groups = result_data[group_col].unique().tolist()
+                with subcol1:
+                    group1 = st.selectbox('Group 1', available_groups, index=0)
+                with subcol2:
+                    group2 = st.selectbox('Group 2', available_groups, index=1)
 
-    with col2:
-        p_threshold = st.number_input('P-value threshold', value=0.05, min_value=0.001, max_value=1.0, step=0.01)
-        fc_threshold = st.number_input('Fold change threshold', value=0.5, min_value=0.1, max_value=5.0, step=0.1)
+        with col2:
+            p_threshold = st.number_input('P-value threshold', value=0.05, min_value=0.001, max_value=1.0, step=0.01)
+            fc_threshold = st.number_input('Fold change threshold', value=0.5, min_value=0.1, max_value=5.0, step=0.1)
 
-    with col3:
-        top_n_labels = st.number_input('Top N labels', value=15, min_value=0, max_value=50, step=1)
-        show_labels = st.checkbox('Show labels', value=True)
+        with col3:
+            top_n_labels = st.number_input('Top N labels', value=15, min_value=0, max_value=50, step=1)
+            show_labels = st.checkbox('Show labels', value=True)
 
-    if group_col and group1 and group2:
-        fig = create_interactive_volcano_plot(
-            data=result_data,
-            group_col=group_col,
-            group1=group1,
-            group2=group2,
-            p_threshold=p_threshold,
-            fc_threshold=fc_threshold,
-            title=f"Interactive Volcano Plot: {group1} vs {group2}",
-            show_labels=show_labels,
-            top_n_labels=int(top_n_labels),
-            exclude_cols=categorical_cols,
-        )
+        if group_col and group1 and group2:
+            fig = create_interactive_volcano_plot(
+                data=result_data,
+                group_col=group_col,
+                group1=group1,
+                group2=group2,
+                p_threshold=p_threshold,
+                fc_threshold=fc_threshold,
+                title=f"Interactive Volcano Plot: {group1} vs {group2}",
+                show_labels=show_labels,
+                top_n_labels=int(top_n_labels),
+                exclude_cols=categorical_cols,
+            )
 
-        st.plotly_chart(fig, use_container_width=True)
-        # add volcano plot svg download
-        volcano_svg = fig.to_image(format="svg", width=800, height=600, scale=2)
-        st.download_button(
-            label="Download Volcano Plot SVG",
-            data=volcano_svg,
-            icon=":material/download:",
-            file_name="volcano_plot.svg",
-            mime="image/svg+xml"
-        )
+            st.plotly_chart(fig, use_container_width=True)
+            # add volcano plot svg download
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Generate plot svg download", icon=":material/manufacturing:",key='generate_volcano_svg'):
+                    with col2:
+                        with st.spinner("Preparing Volcano Plot SVG..."):
+                            volcano_svg = fig.to_image(format="svg", width=800, height=600, scale=2)
+                            st.download_button(
+                                label="Download Volcano Plot SVG",
+                                data=volcano_svg,
+                                icon=":material/download:",
+                                file_name="volcano_plot.svg",
+                                mime="image/svg+xml",
+                                type="primary"
+                            )
+        else:
+            st.info("Select Group Column and Groups to compare to generate the volcano plot.", icon=":material/info:")
+
+    with st.spinner("Generating Volcano Plot Section..."):
+        generate_volcano_plot_section()
 
 else:
     with open('sop_food_readout.md', 'r') as f:
@@ -445,3 +479,4 @@ else:
     - If you encounter any issues or have suggestions, please reach out to the app maintainers.
     - [Checkout other tools](https://wang-bioinformatics-lab.github.io/GNPS2_Documentation/toolindex/#gnps2-web-tools)
     """)
+
