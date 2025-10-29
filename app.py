@@ -318,14 +318,32 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
                 selected_groups = st.multiselect("Select the groups to compare", available, default=available[:2], key='selected_groups_boxplot')
         with col_2:
             st.multiselect('Select numerical variable for y-axis', quantitative_cols, key='y_variables', default=quantitative_cols[0])
+            if len(selected_groups) >= 2:
+                st.segmented_control(label='Significance Testing',options=['kruskal', 'mann_whitney', 'ttest'], key='parametric_boxplot_toggle_key',
+                                     default='kruskal',
+                                     format_func=lambda x: "Kruskal-Wallis" if x == 'kruskal' else ("Mann-Whitney U" if x == 'mann_whitney' else "t-test")
+                                     )
+            st.segmented_control(
+                label="Style",
+                # label_visibility='collapsed',
+                options=['log_scale', "gridlines"],
+                selection_mode='multi',
+                format_func=lambda x: "Use log scale for y-axis" if x == "log_scale" else "Hide gridlines",
+                key='styles_boxplot'
+                )
+            
+
         with st.spinner("Generating Box Plot..."):
-            box_plot_fig = create_food_boxplot(
+            box_plot_fig, stats_results_dict = create_food_boxplot(
                 result_data,
                 x_variable=st.session_state.get('x_variable', 'Classifier'),
                 y_variables=st.session_state.get('y_variables', ['Spinach']),
                 filter_pattern="|".join(selected_groups),
                 comparison_groups=selected_groups,
                 title=f"{",".join(st.session_state.y_variables)} Readout Analysis",
+                use_nonparametric=st.session_state.get('parametric_boxplot_toggle_key', True),
+                log_scale='log_scale'in st.session_state.get('styles_boxplot', []),
+                gridlines='gridlines' not in st.session_state.get('styles_boxplot', []),
             )
             st.plotly_chart(box_plot_fig, use_container_width=True)
             col1, col2 = st.columns(2)
@@ -333,14 +351,46 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
                 if st.button("Generate plot svg download", icon=":material/manufacturing:", key='generate_boxplot_svg'):
                     with col2:
                         with st.spinner("Preparing Box Plot SVG..."):
+                            box_svg = box_plot_fig.to_image(format="svg", width=800, height=600, scale=2)
                             st.download_button(
                                 label="Download Box Plot SVG",
-                                data=box_plot_fig.to_image(format="svg", engine="kaleido").decode('utf-8'),
+                                data=box_svg,
                                 icon=":material/download:",
                                 file_name="food_box_plot.svg",
                                 mime="image/svg+xml",
                                 type="primary"
                             )
+
+            with st.expander("Statistical Test Results", expanded=False):
+                test_name_map = {
+                    'kruskal': 'Kruskal-Wallis H-test',
+                    'mann_whitney': 'Mann-Whitney U test',
+                    'ttest': 'Independent t-test'
+                }
+                test_name = test_name_map.get(st.session_state.get('parametric_boxplot_toggle_key', 'kruskal'))
+                st.markdown(f"**Test Used:** {test_name}")
+
+                for y_var, stats_results in stats_results_dict.items():
+                    st.markdown(f"### {y_var}")
+                    stat_value = stats_results.get('statistic', 'N/A')
+                    p_value = stats_results.get('p_value', 'N/A')
+
+
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric(label="Test Statistic", value=f"{stat_value:.4f}" if isinstance(stat_value, (int, float)) else stat_value)
+                    with col2:
+                        st.metric(label="P-value", value=f"{p_value:.4e}" if isinstance(p_value, (int, float)) else p_value)
+                    with col3:
+                        if isinstance(p_value, (int, float)):
+                            if p_value < 0.001:
+                                st.success("***Highly significant*** (p < 0.001)")
+                            elif p_value < 0.01:
+                                st.success("**Very significant** (p < 0.01)")
+                            elif p_value < 0.05:
+                                st.success("*Significant* (p < 0.05)")
+                            else:
+                                st.info("Not significant (p ≥ 0.05)")
 
     with st.spinner("Generating Box Plot Section..."):
         generate_box_plot_section()
