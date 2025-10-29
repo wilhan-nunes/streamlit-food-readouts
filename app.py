@@ -101,25 +101,29 @@ with st.sidebar:
     selected_biomarkers_file = st.selectbox(
         "Select Biomarkers File",
         BIOMARKERS_FILES_DISPLAY.keys(),
-        help="Choose the biomarkers file to use for the analysis."
+        help="Choose the biomarkers file to use for the analysis.",
+        key="biomarkers_file_selector"
     )
     biomarker_filepath = os.path.join(BIOMARKERS_FOLDER, BIOMARKERS_FILES_DISPLAY.get(selected_biomarkers_file))
 
     lib_search_task_id = st.text_input(f"{BADGE_LIBRARY_} Library Search Workflow Task ID (GNPS2)",
                                        help="Enter the Task ID from a Library Search Workflow to retrieve the library search results.",
                                        placeholder='enter task ID...',
-                                       value=lib_task_id)
+                                       value=lib_task_id,
+                                       key="lib_search_task_id_input")
     if not lib_search_task_id:
         st.warning("Please enter a Task ID from a Library Search Workflow to proceed.", )
 
     quant_table_task_id = st.text_input(f"{BADGE_QUANT_TABLE_} FBMN Workflow Task ID (GNPS2)",
                                         help="Enter the Task ID from a FBMN Workflow to retrieve the quant table.",
                                         placeholder='enter task ID...',
-                                        value=quant_task_id)
+                                        value=quant_task_id,
+                                        key="quant_table_task_id_input")
     sample_quant_table_file = None
     if not quant_table_task_id:
         sample_quant_table_file = st.file_uploader(f"{BADGE_UPLOAD_QUANT_TABLE_} Upload Sample Feature Table",
-                                                   type=["csv", "tsv"])
+                                                   type=["csv", "tsv"],
+                                                   key="sample_quant_table_uploader")
         if sample_quant_table_file:
             st.success(f"{BADGE_UPLOAD_QUANT_TABLE_}  will be used for analysis.")
         elif quant_table_task_id:
@@ -129,7 +133,7 @@ with st.sidebar:
 
     metadata_file = get_gnps2_fbmn_metadata_table(quant_table_task_id)
     if not isinstance(metadata_file, pd.DataFrame):
-        uploaded_metadata_file = st.file_uploader('Upload Metadata File', type=["csv", "tsv"])
+        uploaded_metadata_file = st.file_uploader('Upload Metadata File', type=["csv", "tsv"], key="metadata_file_uploader")
         if uploaded_metadata_file:
             # Convert uploaded file to DataFrame
             file_ext = uploaded_metadata_file.name.split('.')[-1].lower()
@@ -311,7 +315,7 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
             st.selectbox('Select categorical variable for x-axis', categorical_cols, key='x_variable', index=0)
             if 'x_variable' in st.session_state:
                 available = result_data[st.session_state.x_variable].unique().tolist()
-                selected_groups = st.multiselect("Select the groups to compare", available, default=available[:2],)
+                selected_groups = st.multiselect("Select the groups to compare", available, default=available[:2], key='selected_groups_boxplot')
         with col_2:
             st.multiselect('Select numerical variable for y-axis', quantitative_cols, key='y_variables', default=quantitative_cols[0])
         with st.spinner("Generating Box Plot..."):
@@ -349,7 +353,7 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
         # input for PCA
         col1, col2 = st.columns(2)
         with col1:
-            n_components = st.number_input("Number of PCA components", min_value=2, max_value=10, value=2, step=1)
+            n_components = st.number_input("Number of PCA components", min_value=2, max_value=10, value=2, step=1, key='n_components_input')
             st.session_state.n_components = n_components
         with col2:
             # df is your DataFrame
@@ -422,17 +426,17 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
                 subcol1, subcol2 = st.columns(2)
                 available_groups = result_data[group_col].unique().tolist()
                 with subcol1:
-                    group1 = st.selectbox('Group 1', available_groups, index=0)
+                    group1 = st.selectbox('Group 1', available_groups, index=0, key='volcano_group1')
                 with subcol2:
-                    group2 = st.selectbox('Group 2', available_groups, index=1)
+                    group2 = st.selectbox('Group 2', available_groups, index=1, key='volcano_group2')
 
         with col2:
-            p_threshold = st.number_input('P-value threshold', value=0.05, min_value=0.001, max_value=1.0, step=0.01)
-            fc_threshold = st.number_input('Fold change threshold', value=0.5, min_value=0.1, max_value=5.0, step=0.1)
+            p_threshold = st.number_input('P-value threshold', value=0.05, min_value=0.001, max_value=1.0, step=0.01, key='p_threshold_input')
+            fc_threshold = st.number_input('Fold change threshold', value=0.5, min_value=0.1, max_value=5.0, step=0.1, key='fc_threshold_input')
 
         with col3:
-            top_n_labels = st.number_input('Top N labels', value=15, min_value=0, max_value=50, step=1)
-            show_labels = st.checkbox('Show labels', value=True)
+            top_n_labels = st.number_input('Top N labels', value=15, min_value=0, max_value=50, step=1, key='top_n_labels_input')
+            show_labels = st.checkbox('Show labels', value=True, key='show_labels_checkbox')
 
         if group_col and group1 and group2:
             fig = create_interactive_volcano_plot(
