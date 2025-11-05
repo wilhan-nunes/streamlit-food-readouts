@@ -1,4 +1,5 @@
 import os
+import time
 from gnpsdata import workflow_fbmn, taskresult
 import streamlit as st
 from streamlit.components.v1 import html
@@ -242,6 +243,9 @@ if run_analysis or example_run:
         raise
 
 if st.session_state.get('run_analysis', False) and not st.session_state.get('has_metadata', False):
+    with st.spinner("Preparing Sample Food Annotation Summary..."):
+        time.sleep(0.5)
+        
     st.subheader("Sample Food Annotation Summary")
     st.info("This is a limited result based on the provided inputs. If you want to run the full analysis, please upload a metadata file with the sample feature table.")
     filtered_df = add_df_and_filtering(st.session_state.get('food_summary', pd.DataFrame()), key_prefix='food_summary')
@@ -277,6 +281,8 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
     )
 
     # Load ontology
+    with st.spinner("Generating Food Ontology Sankey Diagram..."):
+        time.sleep(0.5)
     #TODO: create new ontology for UK food files
     st.subheader("🌱 Sample Food Ontology")
     ontology = load_ontology('food_ontology.yaml')
@@ -393,10 +399,12 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
                                 st.info("Not significant (p ≥ 0.05)")
 
     with st.spinner("Generating Box Plot Section..."):
+        time.sleep(0.5)
         generate_box_plot_section()
 
     # Create PCA visualizations
     st.markdown("---")
+
     @st.fragment
     def generate_pca_section():
         st.subheader("PCA Visualizations")
@@ -460,6 +468,7 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
                     f"{', '.join(pca_info['feature_names'])}...", unsafe_allow_html=False)
             # st.image(svg_string)
     with st.spinner("Generating PCA Section..."):
+        time.sleep(0.5)
         generate_pca_section()
 
     ## Volcano plot
@@ -522,6 +531,7 @@ elif st.session_state.get('run_analysis', False) and st.session_state.get('has_m
             st.info("Select Group Column and Groups to compare to generate the volcano plot.", icon=":material/info:")
 
     with st.spinner("Generating Volcano Plot Section..."):
+        time.sleep(0.5)
         generate_volcano_plot_section()
 
 else:
