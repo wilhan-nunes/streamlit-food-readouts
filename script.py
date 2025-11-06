@@ -72,6 +72,16 @@ def process_food_biomarkers(biomarkers_file, lib_search_file, metadata_file: str
     # Reshape for merging with metadata
     food_summarized = food_summarized.set_index("category").T.reset_index()
     food_summarized = food_summarized.rename(columns={"index": "filename"})
+    #normalize the values 0 - 100 for each individual column of food_summarized except the filename column
+    cols_to_normalize = food_summarized.columns.difference(['filename'])
+    for col in cols_to_normalize:
+        max_value = food_summarized[col].max()
+        min_value = food_summarized[col].min()
+        if max_value - min_value != 0:
+            food_summarized[col] = (food_summarized[col] - min_value) / (max_value - min_value) * 100
+        else:
+            food_summarized[col] = 0
+
     food_summary_output = food_summarized.copy()
     food_summarized["filename"] = food_summarized["filename"].str.replace(" Peak area", "", regex=False)
 
