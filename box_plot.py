@@ -244,12 +244,12 @@ def _add_statistical_annotation_overlay(fig, filtered_df, x_variable, y_variable
         test_name = "Kruskal-Wallis"
     elif test_type == 'mann_whitney':
         if len(comparison_groups) != 2:
-            return  # Mann-Whitney requires exactly 2 groups
+            return {}  # Mann-Whitney requires exactly 2 groups
         stat, p_value = mannwhitneyu(group_data[0], group_data[1], alternative='two-sided')
         test_name = "Mann-Whitney U"
     elif test_type == 'ttest':
         if len(comparison_groups) != 2:
-            return  # t-test requires exactly 2 groups
+            return {}  # t-test requires exactly 2 groups
         stat, p_value = ttest_ind(group_data[0], group_data[1])
         test_name = "t-test"
     else:
