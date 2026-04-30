@@ -16,7 +16,7 @@ Identify food molecules in your dataset using the GNPS2 library search workflow:
 1. Navigate to GNPS2 and select the Library Search Workflow  
 2. Configure the following inputs:  
    * Input Data Folder: Upload your `filename_iimn_gnps.mgf` file from Step 1  
-   * Input Library Folder: Upload the food dataset MGF file (`500_foods_Spectrum.mgf` from our GitHub repository)  
+   * Input Library Folder: Upload the food dataset MGF file (`500_foods_Spectrum.mgf`, available for download at [Zenodo](https://zenodo.org/records/19701350))  
    * Other parameters: Leave at default values  
    * Analog search: Set to "Yes" if analyzing stool samples (recommended for detecting food molecule analogs)  
 3. Click Submit Workflow 
