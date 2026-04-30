@@ -538,6 +538,10 @@ else:
     with open('sop_food_readout.md', 'r') as f:
         sop_content = f.read()
     st.markdown(sop_content, unsafe_allow_html=True)
+    st.info(
+        "📦 **Food Dataset MGF File** — The `500_foods_Spectrum.mgf` file required for Step 2 (GNPS Food Library Search) "
+        "is not included in this repository. You can download it from [Zenodo](https://zenodo.org/records/19701350)."
+    )
     st.info("""
     - This application is part of the GNPS downstream analysis ecosystem known as **MetaboApps**.
     - If you encounter any issues or have suggestions, please reach out to the app maintainers.
